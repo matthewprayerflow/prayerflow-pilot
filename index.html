@@ -1,0 +1,1004 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#223A60">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>PRAYERFLOW Pilot</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: left rail on wide screens, bottom tab bar on phones. One calm reading column per page; the player is a full-screen layer. */
+:root{
+  --bg:#F4F5F9; --surface:#FFFFFF; --sunken:#E9ECF3; --ink:#18202F; --ink2:#4A566B; --line:#D3D9E5;
+  --primary:#223A60; --on-primary:#FFFFFF; --accent:#8A5A12; --accent-soft:#F3E8D2;
+  --good:#24663F; --good-soft:#DDEFE3; --warn:#9A3A2B; --warn-soft:#F6E1DC; --mid:#6E5200; --mid-soft:#F6EBC8;
+  --display:'Lora',Georgia,'Times New Roman',serif;
+  --ui:'Hanken Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --scale:1;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1525; --surface:#16203A; --sunken:#1D2947; --ink:#E9EDF6; --ink2:#A8B3C9; --line:#2C3957;
+  --primary:#E2B960; --on-primary:#1A1405; --accent:#E2B960; --accent-soft:#2F2A1B;
+  --good:#6FCB92; --good-soft:#17301F; --warn:#F09A8A; --warn-soft:#3A1E1A; --mid:#E8C766; --mid-soft:#35300F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1525; --surface:#16203A; --sunken:#1D2947; --ink:#E9EDF6; --ink2:#A8B3C9; --line:#2C3957;
+  --primary:#E2B960; --on-primary:#1A1405; --accent:#E2B960; --accent-soft:#2F2A1B;
+  --good:#6FCB92; --good-soft:#17301F; --warn:#F09A8A; --warn-soft:#3A1E1A; --mid:#E8C766; --mid-soft:#35300F; color-scheme:dark}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--ui);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0}
+body.locked{overflow:hidden}
+button{font:inherit;color:inherit}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0}
+p{margin:0}
+
+.app{max-width:1180px;margin:0 auto}
+.side{display:contents}
+.brand{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 12px;padding-block:16px 6px;text-decoration:none}
+.brand .mark{font:600 15px/1 var(--display);letter-spacing:.2em}
+.brand .sub{font:italic 400 14px/1 var(--display);color:var(--ink2)}
+.brand .tag{flex-basis:100%;font-size:12px;font-weight:600;letter-spacing:.06em;color:var(--accent)}
+.side-foot{display:none}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--surface);border-top:1px solid var(--line);
+  padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px))}
+.nav a{flex:1;min-width:0;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  font-size:11px;font-weight:600;color:var(--ink2);text-decoration:none;border-radius:10px;padding:4px 2px}
+.nav a svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nav a[aria-current=page]{color:var(--accent);background:var(--sunken)}
+.nav .full{display:none}
+main{padding-block:10px 110px;min-width:0}
+
+@media(min-width:900px){
+  .app{display:grid;grid-template-columns:260px minmax(0,1fr);gap:48px}
+  .side{display:flex;flex-direction:column;gap:26px;position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:30px}
+  .brand{flex-direction:column;gap:6px;padding:0;border-bottom:1px solid var(--line);padding-bottom:20px}
+  .brand .mark{font-size:20px}
+  .nav{position:static;flex-direction:column;border:0;background:none;padding:0;gap:2px}
+  .nav a{flex-direction:row;justify-content:flex-start;gap:12px;font-size:14.5px;min-height:46px;padding:8px 12px}
+  .nav .short{display:none}.nav .full{display:inline}
+  .side-foot{display:block;font-size:12.5px;color:var(--ink2)}
+  main{padding-block:34px 70px}
+}
+
+/* page header */
+.ph{display:grid;gap:8px;margin-bottom:22px}
+.ph h1{font-weight:600;font-size:clamp(1.7rem,4.2vw,2.35rem);line-height:1.15}
+.ph p{color:var(--ink2);max-width:62ch}
+
+/* controls */
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-weight:600;cursor:pointer}
+.btn:hover{border-color:var(--ink2)}
+.btn.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}
+.btn.sm{min-height:36px;padding:0 12px;font-size:13.5px}
+.btn.big{min-height:56px;font-size:17px;padding:0 28px}
+.btn.danger{color:var(--warn);border-color:var(--warn)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 11px;min-height:42px;width:100%}
+textarea{min-height:90px;resize:vertical}
+input[type=radio]{width:20px;height:20px;min-height:0;accent-color:var(--primary)}
+input[type=checkbox]{width:20px;height:20px;min-height:0;accent-color:var(--primary)}
+label.fld{display:grid;gap:5px;font-size:13px;font-weight:600;color:var(--ink2)}
+label.fld input,label.fld select,label.fld textarea{font-weight:400;color:var(--ink)}
+.chip{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:2px 9px;border-radius:99px;background:var(--sunken);color:var(--ink2);white-space:nowrap}
+.chip.good{background:var(--good-soft);color:var(--good)}
+.chip.warn{background:var(--warn-soft);color:var(--warn)}
+.chip.mid{background:var(--mid-soft);color:var(--mid)}
+.chip.acc{background:var(--accent-soft);color:var(--accent)}
+.seg{display:flex;flex-wrap:wrap;gap:3px;background:var(--sunken);padding:3px;border-radius:10px;width:fit-content;max-width:100%}
+.seg button{min-height:38px;padding:0 14px;border:0;border-radius:8px;background:none;font-weight:600;font-size:13.5px;color:var(--ink2);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.15)}
+.tools{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-bottom:14px}
+.tools input[type=search]{flex:1 1 220px;max-width:340px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.note{font-size:13.5px;color:var(--ink2);max-width:66ch}
+.size{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--ink2)}
+.size button{min-height:36px;min-width:42px;border-radius:8px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer}
+.back{display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;margin-bottom:16px}
+
+/* lists */
+.list{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.list>li{border-bottom:1px solid var(--line)}
+.rowbtn{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;width:100%;text-align:left;background:none;border:0;padding:14px 4px;min-height:56px;cursor:pointer}
+.rowbtn:hover{background:var(--sunken)}
+.rowbtn .t{font:500 1.08rem/1.3 var(--display)}
+.rowbtn .s{flex-basis:100%;font-size:13.5px;color:var(--ink2)}
+.rowbtn.on{background:var(--sunken);box-shadow:inset 3px 0 0 var(--accent)}
+.empty{padding:22px 4px;color:var(--ink2)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:20px;margin-top:18px;display:grid;gap:14px}
+.panel h2{font-size:1.35rem}
+.panel h3{font-size:1.05rem}
+details{margin-top:14px}
+summary{cursor:pointer;font-weight:600;min-height:36px;display:flex;align-items:center}
+.own{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px 16px 16px;margin-top:22px}
+.own .grid{display:grid;gap:12px;margin-top:6px}
+
+/* reader */
+.reader h1{font-size:clamp(1.8rem,4.5vw,2.6rem);margin:8px 0 18px}
+.prayer{font:400 calc(1.2rem*var(--scale))/1.75 var(--display);max-width:36em}
+.prayer p+p{margin-top:.9em}
+.facts{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:13.5px;margin:28px 0 0;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts dt{color:var(--ink2)}.facts dd{margin:0;font-weight:500}
+.addbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:22px}
+.addbar select{flex:1 1 200px;max-width:320px}
+.pn{display:flex;justify-content:space-between;gap:12px;margin-top:22px;flex-wrap:wrap}
+
+/* rosary & novenas */
+.sets{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:18px 0 0}
+.setbtn{display:grid;gap:3px;text-align:left;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:68px}
+.setbtn .d{font:600 1.1rem var(--display)}
+.setbtn .s{font-size:12.5px;color:var(--ink2)}
+.setbtn[aria-checked=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);background:var(--accent-soft)}
+.myst{margin:0;padding-left:1.4em;display:grid;gap:6px;font:400 1.1rem/1.5 var(--display)}
+.seq ol{margin:10px 0 0;padding-left:1.6em;display:grid;gap:3px;font-size:14px}
+.days{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.day{width:100%;min-height:58px;text-align:left;display:grid;gap:1px;padding:8px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer}
+.day b{font-size:13px}.day span{font-size:12px;color:var(--ink2)}
+.day[aria-pressed=true]{background:var(--good-soft);border-color:var(--good)}
+.day[aria-pressed=true] b::after{content:" · prayed"}
+.build{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.build select{width:auto;min-width:130px}
+
+/* playlists */
+.split{display:grid;gap:26px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:900px){.split{grid-template-columns:290px minmax(0,1fr)}.back-pl{display:none}}
+@media(max-width:899px){.split.has-sel .plist{display:none}.split:not(.has-sel) .editor{display:none}}
+.plist h2,.editor h2{font-size:1.15rem;margin-bottom:10px}
+.plist .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px}
+.editor{display:grid;gap:14px;align-content:start;min-width:0}
+.editor.empty{border:1px dashed var(--line);border-radius:14px;padding:30px;color:var(--ink2);align-content:center;justify-items:start}
+.items{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.it{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px 12px;padding:12px 2px;border-bottom:1px solid var(--line);align-items:start}
+.it .n{font:600 14px var(--display);color:var(--accent);padding-top:3px}
+.it .main{display:grid;gap:8px;min-width:0}
+.it .head{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.it .head strong{font:500 1.02rem var(--display)}
+.it .side2{display:flex;gap:6px;align-items:center}
+.it .side2 input{width:62px;min-height:36px;padding:4px 8px}
+.it .side2 button{min-width:38px;min-height:38px;border-radius:8px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:700}
+.it details{margin:0}
+.it textarea{min-height:76px}
+@media(max-width:560px){.it{grid-template-columns:24px minmax(0,1fr)}.it .side2{grid-column:2;flex-wrap:wrap}}
+.savebar{position:sticky;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+@media(min-width:900px){.savebar{bottom:12px}}
+pre.pkg{margin:0;max-height:260px;overflow:auto;background:var(--sunken);padding:12px;border-radius:10px;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+
+/* hymns */
+.hy{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:14px 2px}
+.hy .nm{flex:1 1 240px;min-width:0}
+.hy .nm b{font:500 1.08rem var(--display)}
+.hy .nm small{display:block;color:var(--ink2);font-size:13px}
+.hy .chips{display:flex;flex-wrap:wrap;gap:6px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13px;color:var(--ink2);margin:6px 0 14px;align-items:center}
+.mediaform{display:grid;gap:12px}
+.mi{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:12px 2px}
+.mi .nm{flex:1 1 220px;min-width:0}
+.mi video,.mi audio{width:100%;max-width:520px;margin-top:8px}
+.err{color:var(--warn);font-weight:600;font-size:13.5px}
+
+/* parish */
+.slot{display:grid;gap:8px;padding:14px 2px;border-bottom:1px solid var(--line)}
+.slot .g{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.slot b{font:500 1.02rem var(--display)}
+.roles{display:grid;gap:0;margin:0;padding:0;list-style:none}
+.roles li{display:flex;flex-wrap:wrap;gap:4px 14px;padding:10px 0;border-bottom:1px solid var(--line)}
+.roles b{min-width:110px}
+.callout{border-left:3px solid var(--accent);background:var(--accent-soft);padding:12px 14px;border-radius:0 10px 10px 0;font-size:14px;max-width:70ch}
+
+/* content & rights */
+#policy{position:fixed;inset:0;z-index:70;background:rgba(8,12,22,.6);display:flex;padding:max(12px,env(safe-area-inset-top,0px)) max(12px,env(safe-area-inset-right,0px)) max(12px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+.pcard{margin:auto;width:100%;max-width:640px;max-height:100%;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:12px}
+.pcard h2{font-size:1.4rem}.pcard h3{font-size:1.02rem;margin-top:6px}.pcard p{font-size:14.5px;color:var(--ink2)}
+.pcard ul{margin:0;padding-left:1.2em;display:grid;gap:4px;color:var(--ink2);font-size:14.5px}
+.link{background:none;border:0;padding:0;font-weight:600;color:var(--accent);text-decoration:underline;cursor:pointer;min-height:36px}
+.sched{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.fbq{border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:grid;gap:4px;margin:0}
+.fbq legend{font-weight:600;padding:0 4px}
+.fbq label{display:flex;gap:10px;align-items:center;min-height:38px}
+.legal{margin-top:36px;font-size:12.5px;color:var(--ink2)}
+a.btn{display:inline-flex;align-items:center;text-decoration:none}
+.linkrow{flex-basis:100%;display:grid;gap:8px;max-width:520px;padding:4px 0 8px}
+/* player */
+#player{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0px) max(16px,env(safe-area-inset-right,0px)) env(safe-area-inset-bottom,0px) max(16px,env(safe-area-inset-left,0px))}
+.pl-top{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;flex-wrap:wrap}
+.pl-top .tt{font:600 1rem var(--display);flex:1 1 140px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar{height:5px;background:var(--sunken);border-radius:9px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .25s}
+.pl-body{flex:1;overflow:auto;display:flex}
+.pl-in{margin:auto;width:100%;max-width:40rem;padding:26px 0;display:grid;gap:16px}
+.pl-in h2{font-size:clamp(1.5rem,4.5vw,2.1rem)}
+.pl-meta{display:flex;gap:10px;align-items:center;color:var(--ink2);font-size:13.5px}
+.pl-ctl{display:flex;gap:12px;justify-content:space-between;padding:12px 0 16px;border-top:1px solid var(--line)}
+.pl-ctl .primary{flex:1;max-width:340px;margin-left:auto}
+.beads{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--ink2)}
+.bead{width:15px;height:15px;border-radius:50%;border:2px solid var(--accent)}
+.bead.on{background:var(--accent)}
+.mslot{display:grid}
+.mslot video,.mslot audio{width:100%;border-radius:10px}
+.center{text-align:center;justify-items:center}
+
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:80;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px;max-width:min(92vw,520px);text-align:center}
+@media(min-width:900px){#toast{bottom:28px}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head><body>
+
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="#library" aria-label="PRAYERFLOW home">
+      <span class="mark">PRAYERFLOW</span><span class="sub">A Symphony of Prayer</span><span class="tag">Free to Pray. Free to Share.</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <p class="side-foot">No subscriptions, no ads, no interruptions. Prototype preview: your playlists are saved in this browser only.</p>
+  </aside>
+  <main id="main"></main>
+</div>
+<section id="player" role="dialog" aria-modal="true" aria-label="Prayer session" hidden></section>
+<section id="policy" role="dialog" aria-modal="true" aria-label="Content and rights" hidden></section>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="mre" accept="audio/*,video/mp4,.mp3,.mp4,.m4a" hidden data-act="mre">
+
+<script>
+(function(){
+'use strict';
+/* ---------- helpers ---------- */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const clone=o=>JSON.parse(JSON.stringify(o));
+const hash=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return (h>>>0).toString(16)};
+const paras=t=>esc(t).split(/\n\n+/).map(p=>'<p>'+p.replace(/\n/g,'<br>')+'</p>').join('');
+const fmtDur=s=>s?Math.floor(s/60)+':'+String(s%60).padStart(2,'0'):'length unknown';
+const fmtDate=ms=>new Date(ms).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+const ORD=['First','Second','Third','Fourth','Fifth'];
+
+/* ---------- content ---------- */
+const SIGN='In the name of the Father, and of the Son, and of the Holy Spirit. Amen.';
+const PRAYERS=[
+ {id:'our-father',title:'Our Father',cat:'Foundational',text:'Our Father, who art in heaven,\nhallowed be thy name;\nthy kingdom come,\nthy will be done\non earth as it is in heaven.\n\nGive us this day our daily bread,\nand forgive us our trespasses\nas we forgive those who trespass against us;\nand lead us not into temptation,\nbut deliver us from evil.\n\nAmen.'},
+ {id:'hail-mary',title:'Hail Mary',cat:'Marian',text:'Hail Mary, full of grace,\nthe Lord is with thee;\nblessed art thou amongst women,\nand blessed is the fruit of thy womb, Jesus.\n\nHoly Mary, Mother of God,\npray for us sinners,\nnow and at the hour of our death.\n\nAmen.'},
+ {id:'glory-be',title:'Glory Be',cat:'Doxology',text:'Glory be to the Father,\nand to the Son,\nand to the Holy Spirit,\nas it was in the beginning,\nis now, and ever shall be,\nworld without end.\n\nAmen.'},
+ {id:'apostles-creed',title:'Apostles’ Creed',cat:'Creed',text:'I believe in God, the Father almighty,\nCreator of heaven and earth,\nand in Jesus Christ, his only Son, our Lord,\nwho was conceived by the Holy Spirit,\nborn of the Virgin Mary,\nsuffered under Pontius Pilate,\nwas crucified, died and was buried;\nhe descended into hell;\non the third day he rose again from the dead;\nhe ascended into heaven,\nand is seated at the right hand of God the Father almighty;\nfrom there he will come to judge the living and the dead.\n\nI believe in the Holy Spirit,\nthe holy catholic Church,\nthe communion of saints,\nthe forgiveness of sins,\nthe resurrection of the body,\nand life everlasting.\n\nAmen.'},
+ {id:'hail-holy-queen',title:'Hail Holy Queen',cat:'Marian',text:'Hail, holy Queen, Mother of mercy,\nour life, our sweetness and our hope.\nTo thee do we cry, poor banished children of Eve;\nto thee do we send up our sighs,\nmourning and weeping in this valley of tears.\n\nTurn then, most gracious advocate,\nthine eyes of mercy toward us,\nand after this our exile,\nshow unto us the blessed fruit of thy womb, Jesus.\n\nO clement, O loving, O sweet Virgin Mary.\n\nPray for us, O holy Mother of God,\nthat we may be made worthy of the promises of Christ.\n\nAmen.'}
+];
+/* Group prayer line-up (from the group's printed list). Obvious typing errors were corrected; wording awaits review. */
+[
+ {id:'fatima-prayer',title:'O My Jesus',cat:'Group prayers',text:`O my Jesus, forgive us our sins, save us from the fires of hell, and lead all souls to heaven, especially those who are in most need of your mercy.`},
+ {id:'our-lady-of-all-nations',title:'Our Lady of All Nations',cat:'Group prayers',text:`Lord Jesus Christ, Son of the Father, send now Your Spirit over the earth. Let the Holy Spirit live in the hearts of all nations, that they may be preserved from degeneration, disaster and war. May the Lady of All Nations, the Blessed Virgin Mary, be our Advocate. Amen.`},
+ {id:'holy-souls-gertrude',title:'Prayer for the Holy Souls in Purgatory',cat:'Group prayers',text:`Eternal Father, we offer You the Most Precious Blood of Your Divine Son, Jesus, in union with the Holy Masses said throughout the world today, for all the holy souls in purgatory, for sinners everywhere, for sinners in the universal Church, those in my own home and within my family. Amen.`,note:'Attributed to St. Gertrude the Great on the group list. Reviewer to confirm.'},
+ {id:'rosary-closing',title:'Rosary Closing Prayer',cat:'Group prayers',text:`Let us pray.\n\nO God, whose only begotten Son, by His life, death, and resurrection, has purchased for us the rewards of eternal life, grant, we beseech Thee, that meditating upon these mysteries of the most holy Rosary of the Blessed Virgin Mary, we may imitate what they contain and obtain what they promise, through Christ our Lord. Amen.`},
+ {id:'memorare',title:'The Memorare',cat:'Group prayers',text:`Remember, O most gracious Virgin Mary, that never was it known that anyone who fled to thy protection, implored thy help, or sought thy intercession, was left unaided. Inspired by this confidence, we fly unto thee, O Virgin of virgins, our Mother. To thee we come, before thee we stand, sinful and sorrowful. O Mother of the Word Incarnate, despise not our petitions, but in thy mercy hear and answer us. Amen.`},
+ {id:'dm-opening',title:'Divine Mercy: Opening Prayer',cat:'Divine Mercy Chaplet',text:`You expired, Jesus, but the source of life gushed forth for souls, and the ocean of mercy opened up for the whole world. O Fount of Life, unfathomable Divine Mercy, envelop the whole world and empty Yourself out upon us.`},
+ {id:'dm-blood-water',title:'Divine Mercy: O Blood and Water',cat:'Divine Mercy Chaplet',text:`O Blood and Water, which gushed forth from the Heart of Jesus as a fountain of mercy for us, we trust in You!`},
+ {id:'dm-offering',title:'Divine Mercy: Eternal Father',cat:'Divine Mercy Chaplet',text:`Eternal Father, we offer You the Body and Blood, Soul and Divinity of Your Dearly Beloved Son, Our Lord, Jesus Christ, in atonement for our sins and those of the whole world.`},
+ {id:'dm-decade',title:'Divine Mercy: For the Sake of His Sorrowful Passion',cat:'Divine Mercy Chaplet',text:`For the sake of His sorrowful Passion, have mercy on us and on the whole world.`},
+ {id:'dm-holy-god',title:'Divine Mercy: Holy God',cat:'Divine Mercy Chaplet',text:`Holy God, Holy Mighty One, Holy Immortal One, have mercy on us and on the whole world.`},
+ {id:'dm-closing',title:'Divine Mercy: Closing Prayer',cat:'Divine Mercy Chaplet',text:`Eternal God, in whom mercy is endless and the treasury of compassion inexhaustible, look kindly upon us and increase Your mercy in us, that in difficult moments we might not despair nor become despondent, but with great confidence submit ourselves to Your holy will, which is love and mercy itself. Amen.`},
+ {id:'holy-spirit-day',title:'Prayer of the Day to the Holy Spirit',cat:'Group prayers',text:`Come, Holy Spirit, our God and our Creator! Come to us from Your throne in heaven. Come and take possession of our lives and make them all Your own. You are the living spring and the burning fire in our lives. Holy Spirit, please guide our minds with Your light, and inflame our hearts with Your love.\n\nBeneath Your sacred wings lead us safely from all our sins, perils and troubles in contemporary life. Through You, may we come to know God our Father and Jesus our brother. Amen.`},
+ {id:'peace-ukraine-israel-palestine',title:'Prayer for Ukraine, Israel and Palestine',cat:'Group prayers',text:`God of peace and justice, we pray for the people of Ukraine, Israel and Palestine. We pray for peace and the laying down of weapons. We pray for all those who are in fear, that Your Spirit of comfort would draw near to them. We pray for those with power over war or peace, for wisdom, discernment and compassion to guide their decisions. Above all, we pray for all Your precious children, at risk and in fear, that You would hold and protect them. We pray in the name of Jesus, the Prince of Peace, and through Mary, the Queen of Peace. Amen.`},
+ {id:'prayer-philippines',title:'Prayer for the Philippines',cat:'Group prayers',text:`Dear Heavenly Father, Lord, bless our country. Send us Your Holy Spirit, especially in our stand against corruption. Bless every voice raised for justice, every step taken in faith, and every soul seeking a brighter Philippines. Help us build a nation where honesty flourishes, where the poor are lifted, and where Your light shines through every act of courage. We trust in Your perfect plan. In Jesus' name, we pray. Amen.`},
+ {id:'prayer-russia',title:'Prayer for Russia',cat:'Group prayers',text:`Our Lady of Fatima, gently look down on each Russian village and city and town. Dear Star of the Morning, now cleanse in thy beams the Red Star of Russia that balefully gleams. Our rosaries rise to thee, Lady of Light; oh, hasten the dawn of the world's weary night. We trust in thy power; one plea to thy Son, and Russia's conversion will swiftly be won. Amen.`,note:'Source and wording to be confirmed by the reviewer.'},
+ {id:'prayer-calamities',title:'Prayer Against Earthquakes and Other Calamities',cat:'Group prayers',text:`Lord, as we stand helpless in these calamities: typhoons, floods, earthquakes, volcanic eruptions, El Niño and COVID in our country, we implore the name of Jesus and the power of the Holy Spirit to save us all. Please protect our families, houses, roads, bridges, buildings and churches from nature's wrath, and keep us all safe, Lord. This we ask in the mighty name of Jesus. Amen.`,note:'Mentions COVID. The reviewer may want to update the wording.'},
+ {id:'st-john-vianney-priests',title:'St. John Vianney’s Prayer for Priests',cat:'Group prayers',text:`God, please give to Your Church today many more priests after Your own heart. May they be worthy representatives of Christ the Good Shepherd. May they wholeheartedly devote themselves to prayer and penance; be examples of humility and poverty; shining models of holiness; tireless and powerful preachers of the Word of God; zealous dispensers of Your grace in the sacraments. May their loving devotion to Your Son Jesus in the Eucharist, and to Mary, His Mother, be the twin fountains of fruitfulness for their ministry. Amen.`},
+ {id:'st-michael',title:'Prayer to St. Michael the Archangel',cat:'Group prayers',text:`St. Michael the Archangel, defend us in the day of the battle. Be our protection against the wickedness and the snares of the devil. May God rebuke him, we humbly pray, and do thou, O Prince of the heavenly hosts, by the power of God, thrust into hell Satan and all the evil spirits who prowl around the world seeking the ruin of souls. Amen.`},
+ {id:'guardian-angel',title:'Prayer to Our Guardian Angel',cat:'Group prayers',text:`Angel of God, my guardian dear, to whom God's love commits me here, ever this day be at my side, to light and guard, to rule and guide. Amen.`},
+ {id:'pope-francis-prayer',title:'Prayer Listed as Pope Francis’ Prayer',cat:'Group prayers',text:`Holy Trinity, God Almighty, Blood of Christ: destroy the devil, disable and paralyze the traps of those manipulating the whole world.\n\nImmaculate Heart of Mary: trample on the devil, disable and paralyze the traps of those who are manipulating the whole world.\n\nSt. Michael the Archangel: trample on the devil, disable and paralyze the traps of those who are manipulating the whole world. Amen.`,note:'The attribution to Pope Francis is not verified. The reviewer should confirm the source and wording before wide use.'},
+ {id:'cleansing-prayer',title:'Cleansing Prayer',cat:'Group prayers',text:`Heavenly Father, in the name of Jesus Christ our Lord and Savior, by the power of the Holy Spirit, we pray that the cleansing power of the Precious Blood of Your Son come upon us right now. Purify us and wash us clean with the Blood of Jesus from the top of our heads down to the very soles of our feet. Let this Blood penetrate the very marrow of our bones to cleanse us from any entanglement, from whatever spirit we have come in contact with during the course of the day. Anoint us with the gift of the Holy Spirit and refresh our body, soul and spirit. And may the sign of Your Holy Cross (+) drive away all the evil spirits from us. Amen.`,note:'The reviewer should confirm the wording and its use in a group prayer.'},
+ {id:'closing-blessing',title:'Closing Prayers and Blessing',cat:'Group prayers',text:`May the divine assistance remain always with us. Amen.\n\nMay the souls of the faithful departed, through the mercy of God, rest in peace. Amen.\n\nMay the blessing of Almighty God, the Father, the Son and the Holy Spirit, remain with us and our loved ones now and forever. Amen.`}
+].forEach(p=>{p.group=true;PRAYERS.push(p)});
+const MYST={
+ Joyful:['The Annunciation','The Visitation','The Nativity','The Presentation','The Finding in the Temple'],
+ Luminous:['The Baptism of Jesus','The Wedding at Cana','The Proclamation of the Kingdom','The Transfiguration','The Institution of the Eucharist'],
+ Sorrowful:['The Agony in the Garden','The Scourging at the Pillar','The Crowning with Thorns','The Carrying of the Cross','The Crucifixion'],
+ Glorious:['The Resurrection','The Ascension','The Descent of the Holy Spirit','The Assumption','The Coronation of Mary']
+};
+const NOV=[
+ {id:'spirit',title:'Novena to the Holy Spirit',blurb:'Nine days of prayer in preparation for Pentecost.',days:null},
+ {id:'mercy',title:'Divine Mercy Novena',blurb:'Nine days of prayer that begin on Good Friday and lead into Divine Mercy Sunday.',
+  days:['All mankind, especially sinners','Priests and religious','The devout and faithful','Those who do not yet know Jesus','Those separated from the Church','The meek, the humble and little children','Souls who venerate God’s mercy','The souls in purgatory','Souls who have grown lukewarm']},
+ {id:'perpetual',title:'Our Lady of Perpetual Help',blurb:'A beloved Marian devotion, often prayed on a weekly rhythm.',days:null,hymns:['immaculate-mother','mary-immaculate','o-salutaris','mother-of-christ','salve-regina']}
+];
+const HYMNS=[
+ {id:'salve-regina',title:'Salve Regina',type:'Latin chant',uses:['Marian','Closing'],rights:'pd',col:['nov']},
+ {id:'regina-caeli',title:'Regina Caeli',type:'Latin chant',uses:['Marian','Easter'],rights:'pd'},
+ {id:'veni-creator',title:'Veni Creator Spiritus',type:'Latin hymn',uses:['Pentecost','Entrance'],rights:'pd'},
+ {id:'pange-lingua',title:'Pange Lingua / Tantum Ergo',type:'Latin hymn',uses:['Eucharistic','Adoration'],rights:'pd'},
+ {id:'o-salutaris',title:'O Saving Victim (O Salutaris Hostia)',type:'Latin hymn',uses:['Eucharistic','Adoration','Marian'],rights:'pd',col:['nov']},
+ {id:'adoro-te',title:'Adoro Te Devote',type:'Latin hymn',uses:['Eucharistic','Communion'],rights:'pd'},
+ {id:'holy-god',title:'Holy God, We Praise Thy Name',type:'English hymn',uses:['Entrance','Closing'],rights:'pd'},
+ {id:'o-come-emmanuel',title:'O Come, O Come, Emmanuel',type:'English hymn',uses:['Advent','Entrance'],rights:'pd'},
+ {id:'immaculate-mary',title:'Immaculate Mary',type:'Marian hymn',uses:['Marian','Closing'],rights:'varies'},
+ {id:'ave-maria',title:'Ave Maria',type:'Many settings',uses:['Marian','Communion'],rights:'varies'},
+ {id:'be-not-afraid',title:'Be Not Afraid',type:'Contemporary hymn',uses:['Entrance','Communion'],rights:'perm'},
+ {id:'on-eagles-wings',title:'On Eagle’s Wings',type:'Contemporary hymn',uses:['Entrance','Closing'],rights:'perm'},
+ {id:'pananagutan',title:'Pananagutan',type:'Filipino hymn',uses:['Communion','Closing'],rights:'perm'},
+ {id:'immaculate-mother',title:'Immaculate Mother',type:'Marian hymn',uses:['Marian'],rights:'varies',col:['nov']},
+ {id:'mary-immaculate',title:'Mary Immaculate',type:'Marian hymn',uses:['Marian'],rights:'varies',col:['nov']},
+ {id:'mother-of-christ',title:'Mother of Christ',type:'Marian hymn',uses:['Marian'],rights:'varies',col:['nov']}
+];
+const RIGHTS={pd:['Public-domain candidate','good'],varies:['Depends on the setting','mid'],perm:['Permission required','warn']};
+const KIND={prayer:'Prayer',step:'Prayer',meditation:'Reflection',hymn:'Hymn',media:'My media'};
+const PT={
+ mass:{label:'Mass music plan',slots:['Entrance','Responsorial Psalm','Preparation of the Gifts','Communion','Thanksgiving','Recessional']},
+ hour:{label:'Adoration / Holy Hour',slots:['Exposition hymn','Silent adoration','Rosary or litany','Benediction hymn','Closing']},
+ vigil:{label:'Vigil',slots:['Opening','Reading and reflection','Prayer sequence','Closing']},
+ emhc:{label:'EMHC formation',slots:['Opening prayer','Teaching topic','Reflection','Closing prayer']},
+ retreat:{label:'Retreat / recollection',slots:['Opening prayer','First session','Silent time','Second session','Closing']}
+};
+
+/* ---------- state & storage ---------- */
+const KEY='prayerflow.prototype.v1';
+const mk=(kind,title,text,o)=>Object.assign({id:uid(),kind,title,text:text||'',repeat:1,ref:null,media:null},o||{});
+const pi=(id,rep)=>{const p=PRAYERS.find(x=>x.id===id);return mk('prayer',p.title,p.text,{ref:id,repeat:rep||1})};
+function seed(){
+  const now=Date.now();
+  const pl={id:uid(),title:'Evening prayer (example)',desc:'The smallest complete session: three prayers in order.',rev:1,created:now,modified:now,items:[pi('our-father'),pi('hail-mary'),pi('glory-be')]};
+  const plan={id:uid(),type:'hour',title:'First Friday Holy Hour (example)',date:'',coordinator:'',reviewer:'',status:'Draft',notes:'',
+    slots:PT.hour.slots.map(l=>({label:l,ref:'',note:''}))};
+  plan.slots[0].ref='h:o-salutaris';plan.slots[3].ref='h:pange-lingua';plan.slots[1].note='Ten minutes of silence.';
+  return {playlists:[pl],plans:[plan],media:[],mine:[],novena:{},size:1.3};
+}
+function load(){try{const r=localStorage.getItem(KEY);if(!r)return null;const o=JSON.parse(r);return Object.assign({playlists:[],plans:[],media:[],mine:[],novena:{},size:1},o)}catch(e){return null}}
+let D=load()||seed();
+D.links=D.links||{};
+D.group=D.group||defaultGroup();D.fb=D.fb||{};
+function persist(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}}
+const FILES={};
+const S={page:'library',size:D.size||1,focus:null,confirm:null,
+  lib:{q:'',cat:'All',open:null},rn:{tab:'rosary',set:'Joyful',nov:'spirit',day:1},
+  ply:{sel:null,draft:null,dirty:false,impText:'',imp:null},
+  hy:{q:'',use:'All',col:'All',target:'',err:'',file:null,re:null,prev:null},
+  par:{sel:null,newType:'mass'},play:null};
+
+const allPrayers=()=>PRAYERS.concat(D.mine);
+const PR=id=>allPrayers().find(p=>p.id===id);
+const HY=id=>HYMNS.find(h=>h.id===id);
+const MD=id=>D.media.find(m=>m.id===id);
+
+/* ---------- icons & nav ---------- */
+const ICON={
+ library:'<path d="M5 4h10a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h10"/>',
+ rosary:'<circle cx="12" cy="8" r="5.5" stroke-width="3.2" stroke-dasharray="0.1 3.4"/><path d="M12 13.5V21M9.5 16.5h5"/>',
+ playlists:'<path d="M4 6h11M4 11h11M4 16h6"/><circle cx="17" cy="17" r="2.5"/><path d="M19.5 17V8l2.5 1"/>',
+ hymns:'<path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+ parish:'<path d="M12 2v5M10 4.5h4"/><path d="M12 7l5 4v10H7V11z"/><path d="M10 21v-5a2 2 0 0 1 4 0v5"/>'
+};
+const NAV=[['library','Catholic Prayer Library','Prayers'],['rosary','Rosary and Novenas','Rosary'],['playlists','My Prayer Playlists','Playlists'],['hymns','Catholic Hymns','Hymns'],['parish','Chapel & Parish Mode','Parish']];
+function renderNav(){
+  $('#nav').innerHTML=NAV.map(([id,full,short])=>`<a href="#${id}" ${S.page===id?'aria-current="page"':''}><svg viewBox="0 0 24 24" aria-hidden="true">${ICON[id]}</svg><span class="full">${full}</span><span class="short">${short}</span></a>`).join('');
+}
+
+/* ---------- small ui pieces ---------- */
+const head=(t,d)=>`<header class="ph"><h1>${t}</h1><p>${d}</p></header>`;
+const sizeCtl=()=>`<div class="size" role="group" aria-label="Text size"><button data-act="sz" data-v="-1" aria-label="Smaller text">A−</button><span>${Math.round(S.size*100)}%</span><button data-act="sz" data-v="1" aria-label="Larger text">A+</button></div>`;
+const rightsChip=r=>`<span class="chip ${RIGHTS[r][1]}">${RIGHTS[r][0]}</span>`;
+function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>{t.hidden=true},3400)}
+function twoStep(key){if(S.confirm===key){S.confirm=null;return true}S.confirm=key;render();return false}
+function plOptions(sel,withNew){return (withNew?`<option value="__new">New playlist</option>`:'')+D.playlists.map(p=>`<option value="${p.id}" ${sel===p.id?'selected':''}>${esc(p.title)}</option>`).join('')}
+
+/* ---------- playlist model ---------- */
+function newPl(title,items){const now=Date.now();const pl={id:uid(),title,desc:'',rev:1,created:now,modified:now,items:items||[]};D.playlists.unshift(pl);persist();return pl}
+function addTo(target,items){
+  items=clone(items).map(i=>(i.id=uid(),i));
+  if(target==='__new'||!target){const pl=newPl('New playlist',items);toast('Created “'+pl.title+'”.');return}
+  if(S.ply.draft&&S.ply.draft.id===target){S.ply.draft.items.push(...items);S.ply.dirty=true;toast('Added to the playlist you are editing. Save to keep it.');return}
+  const pl=D.playlists.find(p=>p.id===target);if(!pl)return;
+  pl.items.push(...items);pl.rev++;pl.modified=Date.now();persist();toast('Added to “'+pl.title+'”.');
+}
+function openPl(id){const pl=D.playlists.find(p=>p.id===id);S.ply.sel=id;S.ply.draft=pl?clone(pl):null;S.ply.dirty=false}
+function go(page){if(location.hash.slice(1)===page)route();else location.hash=page}
+function rosaryItems(set){
+  const it=[mk('hymn','Opening hymn'),mk('step','Sign of the Cross',SIGN),pi('apostles-creed'),pi('our-father'),pi('hail-mary',3),pi('glory-be')];
+  MYST[set].forEach((m,i)=>{
+    it.push(mk('meditation',ORD[i]+' Mystery: '+m,set+' Mysteries\n\nAnnounce the mystery. Add a reviewed meditation here, in the playlist builder.'));
+    it.push(pi('our-father'),pi('hail-mary',10),pi('glory-be'));
+  });
+  it.push(pi('hail-holy-queen'),mk('hymn','Closing hymn'));return it;
+}
+function novenaItems(n,day){
+  const intent=n.days?'Intention: '+n.days[day-1]+'\n\n':'';
+  const core=[mk('step','Sign of the Cross',SIGN),mk('meditation',n.title+' · Day '+day,intent+'Add the reviewed text for this day in the playlist builder.'),
+    pi('our-father'),pi('hail-mary'),pi('glory-be'),mk('meditation','Closing prayer','Add the reviewed closing prayer in the playlist builder.')];
+  return n.hymns?[mk('hymn','Opening hymn'),...core,mk('hymn','Closing hymn')]:core;
+}
+
+/* ---------- PAGE 1: Library ---------- */
+function libList(){
+  const q=S.lib.q.trim().toLowerCase();
+  const rows=allPrayers().filter(p=>(S.lib.cat==='All'||p.cat===S.lib.cat)&&(!q||(p.title+' '+p.text).toLowerCase().includes(q)));
+  if(!rows.length)return `<li class="empty">No prayers match. Clear the search or choose another category.</li>`;
+  return rows.map(p=>`<li><button class="rowbtn" data-act="open" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Written by you</span>':'<span class="chip mid">Awaiting content review</span>'}<span class="s">${esc(p.text.split('\n')[0])}…</span></button></li>`).join('');
+}
+function pgLibrary(){
+  if(S.lib.open&&PR(S.lib.open))return reader();
+  const cats=['All',...new Set(allPrayers().map(p=>p.cat))];
+  return todayCard()+head('Catholic Prayer Library','Traditional prayers kept as structured content, each with a stable identifier and review status. Open one to read it or add it to a playlist.')+
+  `<div class="tools"><input id="libq" type="search" placeholder="Search prayers" aria-label="Search prayers" data-act="libq" value="${esc(S.lib.q)}">
+   <div class="seg" role="group" aria-label="Category">${cats.map(c=>`<button data-act="libcat" data-v="${esc(c)}" aria-pressed="${S.lib.cat===c}">${esc(c)}</button>`).join('')}</div></div>
+   <ul class="list" id="libList">${libList()}</ul>
+   <details class="own"><summary>Write your own prayer</summary><div class="grid">
+    <label class="fld">Title<input id="ownt" maxlength="80"></label>
+    <label class="fld">Prayer text<textarea id="ownx" maxlength="6000"></textarea></label>
+    <div class="actions"><button class="btn primary" data-act="ownsave">Save to my prayers</button><span class="note">Your own prayers are labeled separately from curated content and stay on this device.</span></div></div></details>`;
+}
+function reader(){
+  const all=allPrayers(),i=all.findIndex(p=>p.id===S.lib.open),p=all[i];
+  return `<div class="back"><button class="btn sm" data-act="libback">← Library</button>${sizeCtl()}</div>
+  <article class="reader"><div class="actions"><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Written by you</span>':'<span class="chip mid">Awaiting content review</span>'}</div>
+  <h1>${esc(p.title)}</h1><div class="prayer">${paras(p.text)}</div>
+  <dl class="facts"><dt>Identifier</dt><dd>prayer.${esc(p.id)}</dd><dt>Language</dt><dd>English</dd><dt>Source</dt><dd>${p.mine?'Written by you':p.group?'Group prayer line-up (printed list). Obvious typing errors corrected.':'Traditional Catholic prayer'}</dd><dt>Revision</dt><dd>r1</dd><dt>Review</dt><dd>${p.mine?'Not applicable':'Wording not yet checked by the content reviewer'}</dd>${p.note?`<dt>Reviewer note</dt><dd>${esc(p.note)}</dd>`:''}</dl>
+  <div class="addbar"><label class="fld" style="flex:1 1 220px">Add to playlist<select id="addpl">${plOptions('',true)}</select></label><button class="btn primary" data-act="addprayer">Add</button></div>
+  <div class="pn"><button class="btn" data-act="libnav" data-id="${all[(i-1+all.length)%all.length].id}">← ${esc(all[(i-1+all.length)%all.length].title)}</button><button class="btn" data-act="libnav" data-id="${all[(i+1)%all.length].id}">${esc(all[(i+1)%all.length].title)} →</button></div>
+  ${p.mine?`<div class="actions" style="margin-top:20px"><button class="btn danger sm" data-act="delmine">${S.confirm==='delmine'?'Tap again to delete this prayer':'Delete this prayer'}</button></div>`:''}</article>`;
+}
+
+/* ---------- PAGE 2: Rosary & Novenas ---------- */
+function rosaryView(){
+  const set=S.rn.set,items=rosaryItems(set);
+  return `<div class="sets" role="radiogroup" aria-label="Mystery set">${Object.keys(MYST).map(k=>`<button class="setbtn" role="radio" aria-checked="${k===set}" data-act="rnset" data-v="${k}"><span class="d">${k}</span><span class="s">${MYST[k][0]} and four more</span></button>`).join('')}</div>
+  <section class="panel"><div><h2>${set} Mysteries</h2><p class="note" style="margin-top:4px">Pick any set. Nothing here is chosen by the day or date.</p></div>
+   <ol class="myst">${MYST[set].map(m=>`<li>${m}</li>`).join('')}</ol>
+   <div class="actions"><button class="btn primary" data-act="rosfollow">Follow now</button><button class="btn" data-act="rossave">Save a copy to my playlists</button></div>
+   <p class="note"><span class="chip mid">Draft template</span> This is a workflow illustration. It is not yet a liturgically reviewed template, and the opening and closing hymns are left for you to choose. The template itself is never changed by your copy.</p></section>
+  <details class="seq"><summary>See the full sequence (${items.length} steps)</summary><ol>${items.map(i=>`<li>${esc(i.title)}${i.repeat>1?' × '+i.repeat:''}</li>`).join('')}</ol></details>`;
+}
+function novenaView(){
+  const n=NOV.find(x=>x.id===S.rn.nov),done=D.novena[n.id]||[];
+  return `<div class="sets" role="radiogroup" aria-label="Novena">${NOV.map(x=>`<button class="setbtn" role="radio" aria-checked="${x.id===n.id}" data-act="nov" data-v="${x.id}"><span class="d">${esc(x.title)}</span><span class="s">${(D.novena[x.id]||[]).length} of 9 days marked</span></button>`).join('')}</div>
+  <section class="panel"><div><h2>${esc(n.title)}</h2><p class="note" style="margin-top:4px">${esc(n.blurb)}</p></div>
+   <ul class="days">${[1,2,3,4,5,6,7,8,9].map(d=>`<li><button class="day" data-act="nday" data-v="${d}" aria-pressed="${done.includes(d)}"><b>Day ${d}</b><span>${n.days?esc(n.days[d-1]):'Text to be added'}</span></button></li>`).join('')}</ul>
+   <div class="actions"><span class="note">Marked days stay private on this device and are not tied to a calendar.</span><button class="btn sm" data-act="nreset">Clear marks</button></div>
+   ${n.hymns?`<div><h3>Novena hymns</h3><ul class="list" style="margin:8px 0 12px">${n.hymns.map(id=>{const h=HY(id);return `<li class="hy"><div class="nm"><b>${esc(h.title)}</b><small>${esc(h.type)}</small></div>${rightsChip(h.rights)}</li>`}).join('')}</ul><p class="note" style="margin-bottom:10px">Your session starts and ends with a hymn step. Choose from these in the playlist builder.</p><button class="btn sm" data-act="novhy">Open these in Catholic Hymns</button></div>`:''}
+   <div class="build"><label class="fld">Pray day<select id="nd" data-act="nsel">${[1,2,3,4,5,6,7,8,9].map(d=>`<option value="${d}" ${S.rn.day===d?'selected':''}>Day ${d}</option>`).join('')}</select></label>
+    <button class="btn primary" data-act="nfollow">Follow now</button><button class="btn" data-act="nsave">Save as playlist</button></div>
+   <p class="note"><span class="chip mid">Structure only</span> Day labels and the daily order are in place. The reviewed prayer text for each day is added in the playlist builder.</p></section>`;
+}
+function pgRosary(){
+  return head('Rosary and Novenas','Reusable ordered prayer templates with explicit mystery and day labels. Follow one now or save a copy to edit.')+
+  `<div class="seg" role="group" aria-label="Choose"><button data-act="rntab" data-v="rosary" aria-pressed="${S.rn.tab==='rosary'}">Rosary</button><button data-act="rntab" data-v="novena" aria-pressed="${S.rn.tab==='novena'}">Novenas</button></div>`+(S.rn.tab==='rosary'?rosaryView():novenaView());
+}
+
+/* ---------- PAGE 3: Playlists ---------- */
+function plistHTML(){
+  return `<div class="hd"><h2>Your playlists</h2><button class="btn sm primary" data-act="plnew">New</button></div>
+  ${D.playlists.length?`<ul class="list">${D.playlists.map(p=>`<li><button class="rowbtn ${S.ply.sel===p.id?'on':''}" data-act="plopen" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="s">${p.items.length} item${p.items.length===1?'':'s'} · revision ${p.rev} · saved ${fmtDate(p.modified)}</span></button></li>`).join('')}</ul>`
+  :`<p class="empty">No playlists yet. Start one here, or build one from the Rosary page.</p>`}`;
+}
+function itemRow(it,i){
+  const n=S.ply.draft.items.length,textual=!(it.kind==='hymn'||it.kind==='media');
+  const hsel=it.kind==='hymn'?`<select data-act="ihymn" data-i="${i}" aria-label="Hymn for step ${i+1}"><option value="">Choose a hymn…</option>${HYMNS.map(h=>`<option value="${h.id}" ${it.ref===h.id?'selected':''}>${esc(h.title)}</option>`).join('')}</select>`:'';
+  const msel=(it.kind==='hymn'||it.kind==='media')?`<select data-act="imedia" data-i="${i}" aria-label="Recording for step ${i+1}"><option value="">${it.kind==='media'?'Choose a recording…':'No recording attached'}</option>${D.media.map(m=>`<option value="${m.id}" ${it.media===m.id?'selected':''}>${esc(m.title)}</option>`).join('')}</select>`:'';
+  const miss=it.media&&MD(it.media)&&!FILES[it.media]?'<span class="chip warn">File not attached this session</span>':'';
+  const edit=(it.kind==='meditation'||it.kind==='step')?`<details><summary>Edit text</summary><textarea data-act="itext" data-i="${i}" aria-label="Text for step ${i+1}">${esc(it.text)}</textarea></details>`:'';
+  return `<li class="it"><span class="n">${i+1}</span><div class="main"><div class="head"><span class="chip ${it.kind==='hymn'||it.kind==='media'?'acc':''}">${KIND[it.kind]}</span><strong>${esc(it.title)}</strong>${miss}</div>${hsel}${msel}${edit}</div>
+   <div class="side2">${textual?`<label class="note" style="display:flex;align-items:center;gap:6px">×<input type="number" min="1" max="60" value="${it.repeat||1}" data-act="irep" data-i="${i}" aria-label="Repeat step ${i+1}"></label>`:''}
+   <button data-act="up" data-i="${i}" aria-label="Move step ${i+1} up" ${i===0?'disabled':''}>↑</button><button data-act="down" data-i="${i}" aria-label="Move step ${i+1} down" ${i===n-1?'disabled':''}>↓</button><button data-act="rm" data-i="${i}" aria-label="Remove step ${i+1}">✕</button></div></li>`;
+}
+const saveBar=()=>{const d=S.ply.draft,saved=D.playlists.find(p=>p.id===d.id);
+  return `${S.ply.dirty?'<span class="chip warn">Unsaved changes</span>':`<span class="chip good">Saved · revision ${saved?saved.rev:1}</span>`}<button class="btn primary" data-act="plsave" ${S.ply.dirty?'':'disabled'}>Save</button><button class="btn" data-act="pldiscard" ${S.ply.dirty?'':'disabled'}>Discard changes</button>`};
+function editorHTML(){
+  const d=S.ply.draft;
+  const opts=`<optgroup label="Prayers">${allPrayers().map(p=>`<option value="prayer:${p.id}">${esc(p.title)}</option>`).join('')}<option value="step:sign">Sign of the Cross</option></optgroup><optgroup label="Hymns">${HYMNS.map(h=>`<option value="hymn:${h.id}">${esc(h.title)}</option>`).join('')}<option value="hymn:">Hymn (choose later)</option></optgroup>${D.media.length?`<optgroup label="My media">${D.media.map(m=>`<option value="media:${m.id}">${esc(m.title)}</option>`).join('')}</optgroup>`:''}`;
+  return `<div class="back back-pl" style="margin:0"><button class="btn sm" data-act="plback">← All playlists</button></div>
+  <label class="fld">Title<input id="ptitle" data-act="ptitle" maxlength="80" value="${esc(d.title)}"></label>
+  <label class="fld">Description<input data-act="pdesc" maxlength="160" value="${esc(d.desc)}"></label>
+  <div><h2>Order of prayer</h2>${d.items.length?`<ol class="items">${d.items.map(itemRow).join('')}</ol>`:`<p class="empty">This playlist is empty. Add a prayer below to begin.</p>`}</div>
+  <div class="addbar" style="margin:0"><label class="fld" style="flex:1 1 220px">Add a step<select id="addsel">${opts}</select></label><button class="btn" data-act="additem">Add</button></div>
+  <details style="margin:0"><summary>Add a reflection or intention</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Title<input id="rt" maxlength="80"></label><label class="fld">Text<textarea id="rx" maxlength="6000"></textarea></label><div><button class="btn" data-act="addrefl">Add reflection</button></div></div></details>
+  <div class="savebar" id="savebar">${saveBar()}</div>
+  <div class="actions"><button class="btn primary" data-act="plfollow" ${D.playlists.find(p=>p.id===d.id).items.length?'':'disabled'}>${S.ply.dirty?'Follow saved version':'Follow'}</button><button class="btn" data-act="pldup">Duplicate</button><button class="btn danger" data-act="pldel">${S.confirm==='pldel'?'Tap again to delete':'Delete'}</button></div>`;
+}
+function manifest(pl){
+  const items=pl.items.map(it=>{const m=it.media&&MD(it.media);return {kind:it.kind,title:it.title,text:it.text,repeat:it.repeat||1,ref:it.ref||null,media:m?{title:m.title,type:m.type,included:false}:null}});
+  return {schema:'prayerflow.session',version:1,title:pl.title,description:pl.desc||'',notice:'Text and order only. No audio, video or links are included. The sender confirms they may share this text.',items,integrity:hash(JSON.stringify([pl.title,items]))};
+}
+function validateImport(txt){
+  let o;try{o=JSON.parse(txt)}catch(e){return {err:'This is not a readable session package. Paste the full text that was copied from PRAYERFLOW.'}}
+  if(!o||o.schema!=='prayerflow.session')return {err:'This package is not a PRAYERFLOW session.'};
+  if(o.version!==1)return {err:'This package uses version '+esc(o.version)+', which this app does not support yet.'};
+  if(typeof o.title!=='string'||!o.title.trim()||o.title.length>200)return {err:'The package has no usable title.'};
+  if(!Array.isArray(o.items)||!o.items.length)return {err:'The package has no items.'};
+  if(o.items.length>200)return {err:'The package is too large. Sessions are limited to 200 items.'};
+  for(const it of o.items){
+    if(!it||!KIND[it.kind]||typeof it.title!=='string'||it.title.length>200||typeof(it.text||'')!=='string'||(it.text||'').length>20000)return {err:'One of the items is malformed, so nothing was imported.'};
+    const r=Number(it.repeat||1);if(!Number.isInteger(r)||r<1||r>60)return {err:'One of the items has an invalid repeat count.'};
+  }
+  if(o.integrity!==hash(JSON.stringify([o.title,o.items])))return {err:'The integrity check failed. The package was changed or copied incompletely, so nothing was imported.'};
+  const missing=o.items.filter(i=>i.media).length;
+  return {ok:true,pkg:o,missing};
+}
+function shareHTML(){
+  const pl=S.ply.sel&&D.playlists.find(p=>p.id===S.ply.sel);
+  const imp=S.ply.imp;
+  return `<section class="panel"><div><h2>Share and import</h2><p class="note" style="margin-top:4px">A session package contains titles, order and prayer text. It never includes journal entries, and it does not bundle recordings or links.</p></div>
+  <details open style="margin:0"><summary>Share a session</summary>${pl?`<div style="display:grid;gap:10px;margin-top:8px"><p class="note">Preview of “${esc(pl.title)}” (saved version). Recipients see which recordings are missing before they save.</p><pre class="pkg" id="pkg">${esc(JSON.stringify(manifest(pl),null,2))}</pre><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="shok" data-act="shok"><span>I confirm the text in this session is mine, public domain, or I have permission to share it. No recordings are included.</span></label><div class="actions"><button class="btn" data-act="copy" data-src="#pkg" disabled>Copy package</button></div></div>`:`<p class="note" style="margin-top:8px">Open a playlist above to preview what would be shared.</p>`}</details>
+  <details style="margin:0" ${imp?'open':''}><summary>Import a session</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Paste a session package<textarea id="imptxt" data-act="imptxt" placeholder="Paste the copied package here">${esc(S.ply.impText)}</textarea></label>
+   <div class="actions"><button class="btn" data-act="impcheck">Check package</button></div>
+   ${imp?(imp.err?`<p class="err">${imp.err}</p>`:`<div class="callout"><b>${esc(imp.pkg.title)}</b><br>${imp.pkg.items.length} items${imp.missing?` · ${imp.missing} need recordings you do not have`:''}. Saving makes your own independent copy. Text in a package comes from the sender, so do not pass it on unless you are allowed to.</div><div class="actions"><button class="btn primary" data-act="impsave">Save as my copy</button></div>`):''}</div></details></section>`;
+}
+function pgPlaylists(){
+  const sel=S.ply.sel&&S.ply.draft;
+  return head('My Prayer Playlists','Build a session, save its exact order, and follow it one step at a time. Text prayers wait for your tap on Next.')+
+  `<div class="split ${sel?'has-sel':''}"><section class="plist">${plistHTML()}</section>
+   <section class="editor ${sel?'':'empty'}" id="editor">${sel?editorHTML():'<h2>Choose a playlist</h2><p>Open one to reorder it, or start a new one. Rosary templates and parish plans can also become playlists.</p>'}</section></div>`+shareHTML();
+}
+
+/* ---------- PAGE 4: Hymns ---------- */
+function hyList(){
+  const q=S.hy.q.trim().toLowerCase();
+  const rows=HYMNS.filter(h=>(S.hy.use==='All'||h.uses.includes(S.hy.use))&&(S.hy.col==='All'||(h.col||[]).includes(S.hy.col))&&(!q||(h.title+' '+(h.comp||'')).toLowerCase().includes(q)));
+  if(!rows.length)return `<li class="empty">No hymns match this search.</li>`;
+  return rows.map(h=>`<li class="hy"><div class="nm"><b>${esc(h.title)}</b><small>${esc(h.type)}${h.comp?' · '+esc(h.comp):''}</small>${(h.notes||[]).map(n=>`<small>${esc(n)}</small>`).join('')}</div><div class="chips">${h.best?'<span class="chip good">Best choice</span>':''}${h.uses.map(u=>`<span class="chip">${u}</span>`).join('')}${rightsChip(h.rights)}</div><div class="actions"><button class="btn sm" data-act="hyadd" data-id="${h.id}" aria-label="Add ${esc(h.title)} to playlist">Add</button>${linkBtns(h)}</div>${linkEd(h)}</li>`).join('');
+}
+function mediaList(){
+  if(!D.media.length)return `<li class="empty">No recordings yet. Add a file you own or have permission to play.</li>`;
+  return D.media.map(m=>{const ok=!!FILES[m.id];
+    const used=D.playlists.filter(p=>p.items.some(i=>i.media===m.id)).length;
+    return `<li class="mi"><div class="nm"><b>${esc(m.title)}</b><small style="display:block;color:var(--ink2);font-size:13px">${m.type==='video'?'Video':'Audio'} · ${fmtDur(m.dur)} · ${esc(m.name)} · ${esc(m.src||'Source not recorded')}</small>
+     ${S.hy.prev===m.id&&ok?`<div id="prevslot"></div>`:''}</div>
+     ${ok?'<span class="chip good">Ready this session</span>':'<span class="chip warn">Re-attach file</span>'}
+     <div class="actions">${ok?`<button class="btn sm" data-act="mprev" data-id="${m.id}">${S.hy.prev===m.id?'Close preview':'Preview'}</button>`:`<button class="btn sm" data-act="mre" data-id="${m.id}">Re-attach</button>`}
+     <button class="btn sm danger" data-act="mrm" data-id="${m.id}">${S.confirm==='mrm'+m.id?(used?`Remove (used in ${used} playlist${used>1?'s':''})`:'Tap again to remove'):'Remove'}</button></div></li>`}).join('');
+}
+function linkBtns(h){const L=D.links[h.id];
+  return L?`<a class="btn sm" href="${esc(L.url)}" target="_blank" rel="noopener noreferrer" aria-label="Open my link for ${esc(h.title)}">Open my link</a><button class="btn sm" data-act="linkedit" data-id="${h.id}" aria-label="Edit my link for ${esc(h.title)}">Edit link</button>`
+  :`<button class="btn sm" data-act="linkedit" data-id="${h.id}" aria-label="Add my link for ${esc(h.title)}">Add my link</button>`}
+function linkEd(h){if(S.hy.linkEdit!==h.id)return '';const L=D.links[h.id];
+  return `<div class="linkrow"><label class="fld">Link to a recording you are allowed to use (https)<input id="linkurl" type="url" maxlength="500" value="${esc(L?L.url:'')}" placeholder="https://"></label><p class="err" id="linkerr"></p>
+   <div class="actions"><button class="btn sm primary" data-act="linksave" data-id="${h.id}">Save link</button>${L?`<button class="btn sm danger" data-act="linkrm" data-id="${h.id}">Remove</button>`:''}<button class="btn sm" data-act="linkcancel">Cancel</button></div>
+   <p class="note">It opens in another app or tab. It stays on this device and is never included in a shared package.</p></div>`}
+const refreshHy=()=>{const l=$('#hyList');if(l)l.innerHTML=hyList();const f=$('#linkurl');if(f)f.focus()};
+function pgHymns(){
+  const uses=['All',...new Set(HYMNS.flatMap(h=>h.uses))];
+  if(!S.hy.target||(S.hy.target!=='__new'&&!D.playlists.find(p=>p.id===S.hy.target)))S.hy.target=D.playlists[0]?D.playlists[0].id:'__new';
+  return head('Catholic Hymns','A planning catalog of hymn titles. Words and recordings are not included here, and rights are shown so nothing is shared by mistake.')+
+  `<div class="tools"><input id="hyq" type="search" placeholder="Search hymns" aria-label="Search hymns" data-act="hyq" value="${esc(S.hy.q)}">
+    <label class="fld" style="grid-auto-flow:column;align-items:center;gap:8px">Add to<select id="hytarget" data-act="hytarget" style="min-width:180px">${plOptions(S.hy.target,true)}</select></label></div>
+   <div class="seg" role="group" aria-label="Collection" style="margin-bottom:10px">${[['All','All hymns'],['nov','Perpetual Help novena']].map(([v,l])=>`<button data-act="hycol" data-v="${v}" aria-pressed="${S.hy.col===v}">${l}</button>`).join('')}</div>
+   <div class="seg" role="group" aria-label="Use" style="margin-bottom:12px">${uses.map(u=>`<button data-act="hyuse" data-v="${u}" aria-pressed="${S.hy.use===u}">${u}</button>`).join('')}</div>
+   <div class="legend">Rights: ${rightsChip('pd')} ${rightsChip('varies')} ${rightsChip('perm')}<span>Indicative only. Verify before distributing, and keep the permission on record. Lyrics of copyrighted songs are not stored here.</span></div>
+   <ul class="list" id="hyList">${hyList()}</ul>
+   <section class="panel"><div><h2>My recordings</h2><p class="note" style="margin-top:4px">Add MP3 or MP4 files you own or are allowed to play. PRAYERFLOW does not search for, host or download music. Files stay on this device. A browser keeps them only while this page is open, so re-attach them next time and the app will tell you when one is missing.</p></div>
+    <ul class="list" id="mediaList">${mediaList()}</ul>
+    <div class="mediaform"><h3>Add a recording</h3>
+     <label class="fld">File (MP3, M4A or MP4)<input type="file" id="mfile" accept="audio/*,video/mp4,.mp3,.mp4,.m4a" data-act="mfile"></label>
+     <label class="fld">Title<input id="mtitle" maxlength="100"></label>
+     <label class="fld">Where did it come from?<select id="msrc"><option value="">Choose one…</option><option>My own recording</option><option>Bought or licensed</option><option>Permission from the publisher or composer</option><option>Public domain</option></select></label>
+     <label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="mrights"><span>I own this recording or have permission to play it. I understand that permission to play is not permission to share it.</span></label>
+     <p class="err" id="merr">${esc(S.hy.err)}</p>
+     <div><button class="btn primary" data-act="madd">Add recording</button></div></div></section>`;
+}
+
+/* ---------- PAGE 5: Chapel & Parish ---------- */
+const planStatusChip=s=>`<span class="chip ${s==='Reviewed'?'good':s==='In review'?'mid':''}">${s}</span>`;
+function planOptions(sel){
+  return `<option value="">Nothing chosen</option><optgroup label="Hymns">${HYMNS.map(h=>`<option value="h:${h.id}" ${sel==='h:'+h.id?'selected':''}>${esc(h.title)}</option>`).join('')}</optgroup>${D.playlists.length?`<optgroup label="My playlists">${D.playlists.map(p=>`<option value="p:${p.id}" ${sel==='p:'+p.id?'selected':''}>${esc(p.title)}</option>`).join('')}</optgroup>`:''}`;
+}
+function planEditor(){
+  const p=D.plans.find(x=>x.id===S.par.sel);
+  return `<div class="back"><button class="btn sm" data-act="planback">← All plans</button><span class="note">Changes save to this device as you type.</span></div>
+
+  <section class="panel" style="margin-top:0"><div class="actions"><span class="chip acc">${PT[p.type].label}</span>${planStatusChip(p.status)}</div>
+   <label class="fld">Plan name<input data-act="pname" maxlength="100" value="${esc(p.title)}"></label>
+   <div class="slot" style="border:0;padding:0"><div class="g">
+    <label class="fld">Occasion or date<input data-act="pdate" maxlength="80" value="${esc(p.date)}" placeholder="For example, First Friday"></label>
+    <label class="fld">Coordinator<input data-act="pcoord" maxlength="80" value="${esc(p.coordinator)}"></label>
+    <label class="fld">Content reviewer<input data-act="prev" maxlength="80" value="${esc(p.reviewer)}"></label>
+    <label class="fld">Review status<select data-act="pstatus">${['Draft','In review','Reviewed'].map(s=>`<option ${p.status===s?'selected':''}>${s}</option>`).join('')}</select></label></div></div></section>
+  <section class="panel"><h2>Order of the gathering</h2><div>${p.slots.map((s,i)=>{
+    const h=s.ref.startsWith('h:')?HY(s.ref.slice(2)):null;
+    const warn=h?(h.rights==='perm'?'<p class="err">Permission is required before this hymn is used in a plan you distribute. Record who granted it.</p>':h.rights==='varies'?'<p class="note"><span class="chip mid">Check the setting</span> The license depends on the arrangement you use.</p>':`<p class="note">${rightsChip('pd')} Verify the edition you use.</p>`):'';
+    return `<div class="slot"><b>${esc(s.label)}</b><div class="g"><select data-act="slotref" data-i="${i}" aria-label="${esc(s.label)}: hymn or playlist">${planOptions(s.ref)}</select><input data-act="slotnote" data-i="${i}" maxlength="200" placeholder="Note, reading or cue" aria-label="${esc(s.label)} note" value="${esc(s.note)}"></div>${warn}</div>`}).join('')}</div></section>
+  <section class="panel"><label class="fld">Notes for the team<textarea data-act="pnotes" maxlength="2000">${esc(p.notes)}</textarea></label>
+   <div class="actions"><button class="btn primary" data-act="planbuild">Build a playlist from this plan</button><button class="btn" data-act="plandup">Duplicate plan</button><button class="btn danger" data-act="plandel">${S.confirm==='plandel'?'Tap again to delete':'Delete plan'}</button></div></section>`;
+}
+function pgParish(){
+  const body=S.par.sel&&D.plans.find(x=>x.id===S.par.sel)?planEditor():
+  `<section class="panel" style="margin-top:0"><h2>Your plans</h2>
+    ${D.plans.length?`<ul class="list">${D.plans.map(p=>`<li><button class="rowbtn" data-act="planopen" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="chip acc">${PT[p.type].label}</span>${planStatusChip(p.status)}<span class="s">${p.slots.filter(s=>s.ref||s.note).length} of ${p.slots.length} slots filled${p.coordinator?' · Coordinator: '+esc(p.coordinator):''}</span></button></li>`).join('')}</ul>`:'<p class="empty">No plans yet. Create the first one below.</p>'}
+    <div class="build"><label class="fld">New plan<select id="newtype" data-act="newtype">${Object.keys(PT).map(k=>`<option value="${k}" ${S.par.newType===k?'selected':''}>${PT[k].label}</option>`).join('')}</select></label><button class="btn primary" data-act="plannew">Create plan</button></div></section>`;
+  return head('Chapel & Parish Mode','Prepare Mass music, adoration, vigils, EMHC formation and retreats. Check each plan with your reviewer, then reuse it.')+
+  `<p class="callout" style="margin-bottom:18px">Plans live on this device only. Shared workspaces, sign-in and syncing between phones are not available yet.</p>`+groupSettings()+body+
+  `<section class="panel"><div><h2>Roles proposed for a shared workspace</h2><p class="note" style="margin-top:4px">These are not active. Ownership, access removal and retention need a separate decision before any shared workspace is built.</p></div>
+   <ul class="roles"><li><b>Coordinator</b><span>Prepares a plan and owns its review.</span><span class="chip">Proposed</span></li><li><b>Editor</b><span>Changes slots and notes in a plan.</span><span class="chip">Proposed</span></li><li><b>Viewer</b><span>Opens and follows a reviewed plan.</span><span class="chip">Proposed</span></li></ul></section>`;
+}
+
+/* ---------- player ---------- */
+const isText=it=>it.kind!=='hymn'&&it.kind!=='media';
+function stopMedia(){const P=S.play;if(P&&P.el){try{P.el.pause();P.el.removeAttribute('src');P.el.load()}catch(e){}P.el=null}if(P&&P.url){URL.revokeObjectURL(P.url);P.url=null}}
+function follow(pl){stopMedia();S.play={pl:clone(pl),i:0,rep:1,done:false,el:null,url:null};renderPlayer()}
+function mediaBlock(it){
+  const m=it.media&&MD(it.media),h=it.ref&&HY(it.ref);
+  const sub=h?`<p class="note">Hymn: ${esc(h.title)}</p>`:'';
+  if(m&&FILES[m.id])return sub+`<div class="mslot" id="mslot"></div><p class="note">Playing “${esc(m.title)}”. The next step opens when it ends, or tap Next to move on.</p>`;
+  const why=m?'This recording is not attached on this device right now. Re-attach it in Catholic Hymns, then try again.':(it.kind==='hymn'&&!h?'No hymn has been chosen for this step.':'No recording is attached to this step.');
+  const L=h&&D.links[h.id];
+  return sub+`<div class="callout">${why} Nothing was skipped silently. Use Next to move on.</div><div class="actions">${L?`<a class="btn primary" href="${esc(L.url)}" target="_blank" rel="noopener noreferrer">Open my link</a>`:''}<button class="btn" data-act="plretry">Try again</button></div>`;
+}
+function renderPlayer(){
+  const el=$('#player'),P=S.play;
+  if(!P){el.hidden=true;el.innerHTML='';document.body.classList.remove('locked');return}
+  el.hidden=false;document.body.classList.add('locked');
+  const items=P.pl.items,n=items.length;
+  if(P.done){
+    el.innerHTML=`<div class="pl-top"><span class="tt">${esc(P.pl.title)}</span></div><div class="bar"><i style="width:100%"></i></div><div class="pl-body"><div class="pl-in center"><h2>Session complete</h2><p class="note">Amen. You followed all ${n} steps of “${esc(P.pl.title)}”.</p><div class="actions"><button class="btn primary big" data-act="plrestart">Pray again</button><button class="btn big" data-act="plstop">Close</button></div></div></div>`;return}
+  const it=items[P.i],txt=isText(it),reps=txt?(it.repeat||1):1,last=P.i===n-1&&P.rep>=reps;
+  const pct=(P.i+(P.rep-1)/reps)/n*100;
+  const beads=reps>1?`<div class="beads" aria-label="${esc(it.title)} ${P.rep} of ${reps}">${reps<=12?Array.from({length:reps},(_,k)=>`<span class="bead ${k<P.rep?'on':''}"></span>`).join(''):''}<span>${esc(it.title)} ${P.rep} of ${reps}</span></div>`:'';
+  const body=txt?(it.text.trim()?`<div class="prayer">${paras(it.text)}</div>`:`<p class="note">This step has no text yet. Add it in the playlist builder.</p>`)+beads:mediaBlock(it);
+  el.innerHTML=`<div class="pl-top"><button class="btn sm" data-act="plstop">Stop</button><span class="tt">${esc(P.pl.title)}</span>${sizeCtl()}</div>
+  <div class="bar" role="progressbar" aria-valuemin="1" aria-valuemax="${n}" aria-valuenow="${P.i+1}"><i style="width:${pct}%"></i></div>
+  <div class="pl-body"><div class="pl-in"><div class="pl-meta"><span class="chip ${txt?'':'acc'}">${KIND[it.kind]}</span><span>Step ${P.i+1} of ${n}</span></div><h2>${esc(it.title)}</h2>${body}</div></div>
+  <div class="pl-ctl"><button class="btn big" data-act="plprev" ${P.i===0&&P.rep===1?'disabled':''}>Previous</button><button class="btn primary big" data-act="plnext">${last?'Finish':'Next'}</button></div>`;
+  mountMedia(it);
+  const nb=el.querySelector('[data-act=plnext]');if(nb&&!txt===false)nb.focus({preventScroll:true});
+}
+function mountMedia(it){
+  const slot=$('#mslot'),m=it.media&&MD(it.media);if(!slot||!m||!FILES[m.id])return;
+  const e=document.createElement(m.type==='video'?'video':'audio');e.controls=true;e.playsInline=true;
+  const url=URL.createObjectURL(FILES[m.id]);S.play.url=url;S.play.el=e;e.src=url;
+  e.addEventListener('ended',()=>ACT.plnext());
+  e.addEventListener('error',()=>{slot.innerHTML='<div class="callout">This file could not be played on this device. Use Next to skip it, or check the file format.</div>'});
+  slot.appendChild(e);const pr=e.play();if(pr&&pr.catch)pr.catch(()=>{});
+}
+
+/* ---------- prayer group ---------- */
+const DAYS=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const GM={
+ Joyful:['The Annunciation','The Visitation of the Virgin Mary to her cousin Elizabeth','The Birth of our Lord Jesus Christ','The Presentation of Jesus in the Temple','The Finding of Jesus in the Temple'],
+ Sorrowful:['The Agony in the Garden','The Scourging at the Pillar','The Crowning with Thorns','The Carrying of the Cross','The Crucifixion and Death of our Lord Jesus Christ'],
+ Glorious:['The Resurrection','The Ascension','The Descent of the Holy Spirit upon Mama Mary and the Apostles','The Assumption of Mama Mary into Heaven','The Crowning of our Blessed Mother as Queen of Heaven and Earth'],
+ Luminous:['The Baptism of our Lord Jesus at the River Jordan','The First Miracle at the Wedding in Cana','The Proclamation of the Kingdom of God','The Transfiguration','The Institution of the Holy Eucharist']
+};
+const pr=(id,rep)=>{const p=PR(id);return mk('prayer',p.title,p.text,{ref:id,repeat:rep||1})};
+function defaultGroup(){
+  const P=ref=>({type:'prayer',ref,repeat:1});
+  return {name:'Rosary Prayer Group',joinLink:'',prayed:{},
+    schedule:{0:'Glorious',1:'Joyful',2:'Sorrowful',3:'Glorious',4:'Luminous',5:'Sorrowful',6:'Joyful'},
+    parts:[{type:'core'},{type:'mysteries'},P('our-lady-of-all-nations'),P('holy-souls-gertrude'),P('hail-holy-queen'),P('rosary-closing'),P('memorare'),{type:'chaplet'},P('holy-spirit-day'),P('peace-ukraine-israel-palestine'),P('prayer-philippines'),P('prayer-russia'),P('prayer-calamities'),P('st-john-vianney-priests'),P('st-michael'),P('guardian-angel'),P('pope-francis-prayer'),{type:'intentions'},P('cleansing-prayer'),P('closing-blessing')]};
+}
+const dateKey=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const todaySet=()=>S.gset||D.group.schedule[new Date().getDay()];
+function chaplet(){
+  const it=[pr('dm-opening'),pr('dm-blood-water',3),pr('our-father'),pr('hail-mary'),pr('apostles-creed')];
+  for(let d=1;d<=5;d++){
+    it.push(mk('prayer','Eternal Father · decade '+d+' of 5',PR('dm-offering').text,{ref:'dm-offering'}));
+    it.push(mk('prayer','For the sake of His sorrowful Passion · decade '+d+' of 5',PR('dm-decade').text,{ref:'dm-decade',repeat:10}));
+  }
+  it.push(pr('dm-holy-god',3),mk('prayer','Jesus, King of Mercy','Jesus, King of Mercy, we trust in You.'),pr('dm-closing'));
+  return it;
+}
+function groupSession(set){
+  const g=D.group,out=[];
+  g.parts.forEach(pt=>{
+    if(pt.type==='core')out.push(pr('apostles-creed'),pr('our-father'),pr('hail-mary',3),pr('glory-be'));
+    else if(pt.type==='mysteries')GM[set].forEach((m,i)=>out.push(mk('meditation',ORD[i]+' '+set+' Mystery',m),pr('our-father'),pr('hail-mary',10),pr('glory-be'),pr('fatima-prayer')));
+    else if(pt.type==='chaplet')out.push(...chaplet());
+    else if(pt.type==='intentions')out.push(mk('meditation','Intentions of the Holy Father','For the intentions of the Holy Father and our personal intentions.'),pr('our-father'),pr('hail-mary'),pr('glory-be'));
+    else if(pt.type==='prayer'&&PR(pt.ref))out.push(pr(pt.ref,pt.repeat));
+  });
+  return {title:g.name+' · '+set+' Mysteries',items:out};
+}
+function todayCard(){
+  const g=D.group,set=todaySet(),done=g.prayed[dateKey()];
+  return `<section class="panel" style="margin-top:0;margin-bottom:24px"><div><span class="chip acc">${esc(g.name)}</span><h2 style="margin-top:8px">Today’s prayer</h2><p class="note">${DAYS[new Date().getDay()]}: the ${set} Mysteries</p></div>
+   <div class="actions"><button class="btn primary big" data-act="gostart">Start today’s prayer</button>${g.joinLink?`<a class="btn big" href="${esc(g.joinLink)}" target="_blank" rel="noopener noreferrer">Join the group</a>`:''}</div>
+   <div class="actions"><button class="btn" data-act="gdone" aria-pressed="${!!done}">${done?'Prayed today ✓':'I prayed today'}</button></div>
+   <details style="margin:0"><summary>Pray a different set today</summary><div class="seg" style="margin-top:8px" role="group" aria-label="Mystery set">${Object.keys(GM).map(k=>`<button data-act="gset" data-v="${k}" aria-pressed="${set===k}">${k}</button>`).join('')}</div></details></section>`;
+}
+function partLabel(p){
+  if(p.type==='core')return 'Opening prayers: Creed, Our Father, 3 Hail Marys, Glory Be';
+  if(p.type==='mysteries')return 'The five mysteries of the day';
+  if(p.type==='chaplet')return 'Chaplet of the Divine Mercy';
+  if(p.type==='intentions')return 'Intentions of the Holy Father';
+  const x=PR(p.ref);return x?x.title:'(prayer removed)';
+}
+function groupSettings(){
+  const g=D.group,n=g.parts.length;
+  const opts=`<optgroup label="Rosary parts"><option value="part:core">Opening prayers</option><option value="part:mysteries">The five mysteries of the day</option><option value="part:chaplet">Chaplet of the Divine Mercy</option><option value="part:intentions">Intentions of the Holy Father</option></optgroup><optgroup label="Prayers">${allPrayers().map(p=>`<option value="prayer:${p.id}">${esc(p.title)}</option>`).join('')}</optgroup>`;
+  return `<section class="panel" style="margin-top:0;margin-bottom:18px"><div><h2>Prayer group line-up</h2><p class="note" style="margin-top:4px">For the prayer leader. Choose the prayers once. Members see them on the first page, with the right mystery for the day.</p></div>
+   <label class="fld">Group name<input data-act="gname" maxlength="60" value="${esc(g.name)}"></label>
+   <div><h3>Mystery for each day</h3><div class="sched" style="margin-top:8px">${DAYS.map((d,i)=>`<label class="fld">${d}<select data-act="gday" data-i="${i}">${Object.keys(GM).map(k=>`<option ${g.schedule[i]===k?'selected':''}>${k}</option>`).join('')}</select></label>`).join('')}</div></div>
+   <div><h3>Order of prayer</h3><ol class="items" style="margin-top:8px">${g.parts.map((p,i)=>`<li class="it"><span class="n">${i+1}</span><div class="main"><div class="head"><strong>${esc(partLabel(p))}</strong></div></div><div class="side2">${p.type==='prayer'?`<label class="note" style="display:flex;align-items:center;gap:6px">×<input type="number" min="1" max="60" value="${p.repeat||1}" data-act="grep" data-i="${i}" aria-label="Repeat ${esc(partLabel(p))}"></label>`:''}<button data-act="gup" data-i="${i}" aria-label="Move up" ${i===0?'disabled':''}>↑</button><button data-act="gdown" data-i="${i}" aria-label="Move down" ${i===n-1?'disabled':''}>↓</button><button data-act="grm" data-i="${i}" aria-label="Remove">✕</button></div></li>`).join('')}</ol></div>
+   <div class="addbar" style="margin:0"><label class="fld" style="flex:1 1 220px">Add a prayer<select id="gadd">${opts}</select></label><button class="btn" data-act="gaddpart">Add</button></div>
+   <label class="fld">Link to the group’s live prayer (https)<input type="url" data-act="gjoin" maxlength="500" value="${esc(g.joinLink)}" placeholder="https://"></label><p class="err" id="gjerr"></p>
+   <div><h3>Share this line-up</h3><p class="note" style="margin:4px 0 8px">Make one link and post it in your group chat. Members tap it and confirm, and they get your list, your weekday schedule and the live prayer link. Send a new link whenever you change the list. Prayers you wrote yourself are not included.</p>
+   ${S.glink?`${/^https?:$/.test(location.protocol)?'':'<p class="err">This link only works once the app is on a website.</p>'}<label class="fld">Line-up link<textarea id="glink" readonly rows="3">${esc(groupLink())}</textarea></label><div class="actions" style="margin-top:8px"><button class="btn primary" data-act="gcopy">Copy link</button></div>`:`<button class="btn primary" data-act="gmake">Make a link</button>`}</div>
+   <div class="actions"><button class="btn" data-act="gostart">Preview today’s session</button><button class="btn danger" data-act="greset">${S.confirm==='greset'?'Tap again to restore the default line-up':'Restore the default line-up'}</button></div></section>`;
+}
+const FBQ=[['q1','Was it easy to open the app and find today’s prayer?',['Yes','A little hard','Hard']],
+ ['q2','Was the text big enough to read?',['Yes','No']],
+ ['q3','Did the Next button and the bead counter help you keep your place?',['Yes','A little','No']],
+ ['q4','Did you use it on a day you missed the live prayer?',['Yes','No']],
+ ['q5','Did it help you feel close to the group?',['Closer','The same','Less close']]];
+function fbText(){
+  const f=D.fb||{};
+  return 'PRAYERFLOW pilot feedback\n'+FBQ.map(([k,q])=>q+' '+(f[k]||'(no answer)')).join('\n')+'\nAnything confusing or missing? '+(f.note||'(nothing written)');
+}
+const updFb=()=>{const o=$('#fbout');if(o)o.value=fbText()};
+function feedbackHTML(){
+  return `<div class="pcard" tabindex="-1"><h2>Tell us how it went</h2><p>Answer what you can, then copy your answers and send them to your prayer leader in a message.</p>
+   ${FBQ.map(([k,q,o])=>`<fieldset class="fbq"><legend>${q}</legend>${o.map(v=>`<label><input type="radio" name="${k}" value="${esc(v)}" data-act="fbq" ${(D.fb||{})[k]===v?'checked':''}> ${v}</label>`).join('')}</fieldset>`).join('')}
+   <label class="fld">Anything confusing or missing?<textarea data-act="fbnote" maxlength="1000">${esc((D.fb||{}).note||'')}</textarea></label>
+   <label class="fld">Your answers<textarea id="fbout" readonly>${esc(fbText())}</textarea></label>
+   <div class="actions"><button class="btn primary" data-act="fbcopy">Copy my answers</button><button class="btn" data-act="polclose">Close</button></div></div>`;
+}
+
+/* ---------- group line-up link ---------- */
+const SETC={Joyful:'J',Luminous:'L',Sorrowful:'S',Glorious:'G'};
+const PARTC={core:'~core',mysteries:'~mys',chaplet:'~chap',intentions:'~int'};
+const b64u=s=>btoa(unescape(encodeURIComponent(s))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const unb64u=s=>decodeURIComponent(escape(atob(s.replace(/-/g,'+').replace(/_/g,'/'))));
+function groupLink(){
+  const g=D.group;
+  const parts=g.parts.filter(p=>p.type!=='prayer'||!/^mine-/.test(p.ref)).map(p=>p.type==='prayer'?p.ref+((p.repeat||1)>1?'*'+p.repeat:''):PARTC[p.type]);
+  const code=b64u(JSON.stringify({v:1,n:g.name,s:[0,1,2,3,4,5,6].map(i=>SETC[g.schedule[i]]).join(''),p:parts,j:g.joinLink||''}));
+  return location.origin+location.pathname+'#g='+code;
+}
+function decodeGroup(code){
+  const bad={err:'This link is not a PRAYERFLOW line-up, or it was cut short. Ask your prayer leader to send it again.'};
+  let o;try{o=JSON.parse(unb64u(code))}catch(e){return bad}
+  if(!o||o.v!==1||typeof o.n!=='string'||!o.n.trim()||o.n.length>60||typeof o.s!=='string'||o.s.length!==7||!Array.isArray(o.p)||o.p.length>80)return bad;
+  const rev={};Object.keys(SETC).forEach(k=>{rev[SETC[k]]=k});
+  const schedule={};for(let i=0;i<7;i++){const k=rev[o.s[i]];if(!k)return bad;schedule[i]=k}
+  const back={};Object.keys(PARTC).forEach(k=>{back[PARTC[k]]=k});
+  const parts=[];let missing=0;
+  for(const x of o.p){
+    if(typeof x!=='string'||x.length>80)return bad;
+    if(back[x]){parts.push({type:back[x]});continue}
+    const a=x.split('*'),r=a[1]?parseInt(a[1],10):1;
+    if(!(r>=1&&r<=60))return bad;
+    if(!PR(a[0])){missing++;continue}
+    parts.push({type:'prayer',ref:a[0],repeat:r});
+  }
+  if(!parts.length)return bad;
+  let j='';if(typeof o.j==='string'&&o.j){try{const u=new URL(o.j);if(u.protocol==='https:')j=u.href}catch(e){}}
+  return {ok:true,g:{name:o.n.trim(),schedule,parts,joinLink:j},missing};
+}
+function openLineup(code){
+  try{history.replaceState(null,'',location.pathname+location.search+'#library')}catch(e){}
+  S.page='library';S.confirm=null;window.scrollTo(0,0);render();
+  POL.open=true;POL.view='lineup';POL.lineup=decodeGroup(code);POL.after=null;renderPolicy();
+  const c=$('#policy .pcard');if(c)c.focus();
+}
+
+/* ---------- content & rights ---------- */
+const POL={open:false,after:null};
+const legalFoot=()=>`<p class="legal"><button class="link" data-act="policy">Content and rights</button> · <button class="link" data-act="support">Support PRAYERFLOW</button> · <button class="link" data-act="feedback">Send feedback</button> · Titles, composer credits and rights labels are indicative. Free to pray, free to share, with no ads.</p>`;
+const POLICY=[
+ ['What PRAYERFLOW shares','Prayer texts, session titles and the order of a session. PRAYERFLOW never uploads, hosts or sends audio or video.'],
+ ['Your recordings','Add only MP3 or MP4 files you made, bought, were licensed or were given permission to play. Files stay on your own device. PRAYERFLOW does not search for, host or download music, and it must not be used to copy files from sites that do not allow it. Permission to play a recording is not permission to share it.'],
+ ['Links to other apps','You may save a link to a recording on another app or site. It opens there, not inside PRAYERFLOW. Links stay on your device and are never put in a shared package. Save only links to sources you are allowed to use.'],
+ ['Lyrics','Lyrics of copyrighted songs are not stored in PRAYERFLOW. Text may be shared only if it is public domain, written by you, or you have written permission. Do not paste song lyrics into a reflection unless one of those is true.'],
+ ['Prayer texts','The traditional prayers shown here are awaiting review by a content reviewer. Some modern translations and Mass texts are copyrighted, so check the wording before you distribute it.'],
+ ['Credits and rights labels','Titles and composer credits are shown for planning and credit. The rights labels (public-domain candidate, depends on the setting, permission required) are indicative only. Verify them and keep your permission on record before distributing anything. Hymn line-ups taken from a published missalette are for pilot use only until the publisher gives permission.'],
+ ['Your data','Your playlists, plans and recordings stay on your device. A shared session package never includes recordings.'],
+ ['Rights holders','If you own content shown here and want a title, credit or text changed or removed, write to [contact address to be added by the PRAYERFLOW owner]. Requests are reviewed promptly.'],
+ ['Not legal advice','This is a plain-language draft and has not yet been reviewed by a lawyer. Rules about music and text differ between places, so confirm with your parish or diocese before wider use.']
+];
+function renderPolicy(){
+  const el=$('#policy');if(!POL.open){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;
+  if(POL.view==='lineup'){const L=POL.lineup;
+    el.innerHTML=L.err?`<div class="pcard" tabindex="-1"><h2>Line-up link</h2><p class="err">${esc(L.err)}</p><div class="actions"><button class="btn primary" data-act="polclose">Close</button></div></div>`
+    :`<div class="pcard" tabindex="-1"><h2>Use this group’s line-up?</h2><p><b>${esc(L.g.name)}</b> · ${L.g.parts.length} parts of prayer${L.g.joinLink?' · includes a link to the live prayer':''}.</p>${L.missing?`<p class="err">${L.missing} prayer${L.missing>1?'s':''} in this link are not in this version and were left out.</p>`:''}<p>This replaces the line-up on this phone. Your “I prayed today” marks stay.</p><div class="actions"><button class="btn primary big" data-act="lineupyes">Use this line-up</button><button class="btn big" data-act="polclose">Not now</button></div></div>`;return}
+  if(POL.view==='feedback'){el.innerHTML=feedbackHTML();return}
+  if(POL.view==='support'){el.innerHTML=`<div class="pcard" tabindex="-1"><div class="actions"><h2>Support PRAYERFLOW</h2><span class="chip good">Optional</span></div>
+   <p>PRAYERFLOW is free to everyone. Nothing here unlocks or limits any prayer, playlist or sharing, and you can close this page at any time.</p>
+   <h3>Ways to help</h3><ul><li>Pray for the people building and using it.</li><li>Volunteer as a music minister, content reviewer, translator or tester.</li><li>Introduce PRAYERFLOW to your parish or diocese.</li><li>Sponsor its running costs through your parish or organization.</li></ul>
+   <h3>Giving</h3><p>Giving is not open yet, and this app takes no payment today. Before it opens, this page will say who receives gifts, what they pay for, and how spending is reported.</p>
+   <h3>What gifts will cover</h3><p>Developer time, content review, legal review, store fees, music licensing and support.</p>
+   <div class="actions"><button class="btn primary" data-act="polclose">Close</button></div></div>`;return}
+  el.innerHTML=`<div class="pcard" tabindex="-1"><div class="actions"><h2>Content and rights</h2><span class="chip mid">Draft, pending legal review</span></div>
+   ${POLICY.map(([h,t])=>`<h3>${h}</h3><p>${esc(t)}</p>`).join('')}
+   ${D.ack?`<div class="actions"><button class="btn primary" data-act="polclose">Close</button></div>`
+   :`<label style="display:flex;gap:10px;align-items:flex-start;margin-top:8px"><input type="checkbox" id="polok" data-act="polok"><span>I have read this and agree to use PRAYERFLOW this way.</span></label>
+     <div class="actions"><button class="btn primary" data-act="polagree" disabled>Agree and continue</button><button class="btn" data-act="polclose">Not now</button></div>`}</div>`;
+}
+function openPolicy(after){POL.open=true;POL.view='policy';POL.after=after||null;renderPolicy();const c=$('#policy .pcard');if(c)c.focus()}
+
+/* ---------- render ---------- */
+const PAGES={library:pgLibrary,rosary:pgRosary,playlists:pgPlaylists,hymns:pgHymns,parish:pgParish};
+function render(){
+  document.documentElement.style.setProperty('--scale',S.size);
+  renderNav();$('#main').innerHTML=PAGES[S.page]()+legalFoot();renderPlayer();
+  if(S.hy.prev&&S.page==='hymns')mountPreview();
+  if(S.focus){const f=$(S.focus);if(f)f.focus();S.focus=null}
+}
+function mountPreview(){
+  const m=MD(S.hy.prev),slot=$('#prevslot');if(!m||!slot||!FILES[m.id])return;
+  const e=document.createElement(m.type==='video'?'video':'audio');e.controls=true;e.src=URL.createObjectURL(FILES[m.id]);slot.appendChild(e);
+}
+function route(){
+  const h=location.hash.slice(1);if(h.indexOf('g=')===0){openLineup(h.slice(2));return}
+  S.page=PAGES[h]?h:'library';S.confirm=null;window.scrollTo(0,0);render();
+}
+function refreshSaveBar(){const b=$('#savebar');if(b)b.innerHTML=saveBar();const f=$('[data-act=plfollow]');if(f)f.textContent=S.ply.dirty?'Follow saved version':'Follow'}
+function copyText(src){
+  const node=$(src);const t=node.textContent;
+  const fb=()=>{const r=document.createRange();r.selectNodeContents(node);const s=getSelection();s.removeAllRanges();s.addRange(r);toast('Press and hold to copy the selected text.')};
+  try{navigator.clipboard.writeText(t).then(()=>toast('Package copied.'),fb)}catch(e){fb()}
+}
+
+/* ---------- actions ---------- */
+const ACT={
+ sz(b){S.size=Math.min(1.6,Math.max(.9,Math.round((S.size+(+b.dataset.v)*.1)*10)/10));D.size=S.size;persist();render()},
+ libcat(b){S.lib.cat=b.dataset.v;render()},
+ open(b){S.lib.open=b.dataset.id;window.scrollTo(0,0);render()},
+ libback(){S.lib.open=null;S.confirm=null;render()},
+ libnav(b){S.lib.open=b.dataset.id;S.confirm=null;window.scrollTo(0,0);render()},
+ addprayer(){const p=PR(S.lib.open);addTo($('#addpl').value,[pi_(p)]);render()},
+ ownsave(){const t=$('#ownt').value.trim(),x=$('#ownx').value.trim();if(!t||!x){toast('Add a title and the prayer text first.');return}
+  D.mine.push({id:'mine-'+uid(),title:t,cat:'My prayers',text:x,mine:true});persist();toast('Saved to your prayers.');render()},
+ delmine(){if(!twoStep('delmine'))return;D.mine=D.mine.filter(p=>p.id!==S.lib.open);persist();S.lib.open=null;toast('Prayer deleted.');render()},
+ /* rosary */
+ rntab(b){S.rn.tab=b.dataset.v;render()},
+ rnset(b){S.rn.set=b.dataset.v;render()},
+ rosfollow(){follow({title:S.rn.set+' Mysteries of the Rosary',items:rosaryItems(S.rn.set)})},
+ rossave(){const pl=newPl('Rosary: '+S.rn.set+' Mysteries',rosaryItems(S.rn.set));openPl(pl.id);toast('Saved a copy. The template is unchanged.');go('playlists')},
+ nov(b){S.rn.nov=b.dataset.v;render()},
+ nday(b){const id=S.rn.nov,d=+b.dataset.v,a=D.novena[id]||[];D.novena[id]=a.includes(d)?a.filter(x=>x!==d):a.concat(d);persist();S.focus='[data-act=nday][data-v="'+d+'"]';render()},
+ nreset(){D.novena[S.rn.nov]=[];persist();render()},
+ nfollow(){const n=NOV.find(x=>x.id===S.rn.nov);follow({title:n.title+' · Day '+S.rn.day,items:novenaItems(n,S.rn.day)})},
+ nsave(){const n=NOV.find(x=>x.id===S.rn.nov);const pl=newPl(n.title+' · Day '+S.rn.day,novenaItems(n,S.rn.day));openPl(pl.id);toast('Saved as a playlist.');go('playlists')},
+ /* playlists */
+ plnew(){if(S.ply.dirty){toast('Save or discard your changes first.');return}const pl=newPl('Untitled playlist',[]);openPl(pl.id);S.focus='#ptitle';render()},
+ plopen(b){if(S.ply.dirty&&S.ply.sel!==b.dataset.id){toast('Save or discard your changes first.');return}openPl(b.dataset.id);S.confirm=null;window.scrollTo(0,0);render()},
+ plback(){if(S.ply.dirty){toast('Save or discard your changes first.');return}S.ply.sel=null;S.ply.draft=null;S.confirm=null;render()},
+ plsave(){const d=S.ply.draft;if(!d.title.trim()){toast('Give the playlist a title before saving.');$('#ptitle').focus();return}
+  const i=D.playlists.findIndex(p=>p.id===d.id);d.rev=D.playlists[i].rev+1;d.modified=Date.now();D.playlists[i]=clone(d);persist();S.ply.draft=clone(d);S.ply.dirty=false;toast('Saved as revision '+d.rev+'.');render()},
+ pldiscard(){openPl(S.ply.sel);toast('Changes discarded. The saved version is intact.');render()},
+ plfollow(){const pl=D.playlists.find(p=>p.id===S.ply.sel);if(pl&&pl.items.length)follow(pl)},
+ pldup(){if(S.ply.dirty){toast('Save or discard your changes first.');return}const src=D.playlists.find(p=>p.id===S.ply.sel);const pl=newPl(src.title+' (copy)',clone(src.items).map(i=>(i.id=uid(),i)));pl.desc=src.desc;openPl(pl.id);toast('Duplicated.');render()},
+ pldel(){if(!twoStep('pldel'))return;D.playlists=D.playlists.filter(p=>p.id!==S.ply.sel);persist();S.ply.sel=null;S.ply.draft=null;S.ply.dirty=false;toast('Playlist deleted.');render()},
+ up(b){const i=+b.dataset.i,a=S.ply.draft.items;if(i>0){[a[i-1],a[i]]=[a[i],a[i-1]];S.ply.dirty=true;S.focus='[data-act=up][data-i="'+(i-1)+'"]:not(:disabled), [data-act=down][data-i="'+(i-1)+'"]';render()}},
+ down(b){const i=+b.dataset.i,a=S.ply.draft.items;if(i<a.length-1){[a[i+1],a[i]]=[a[i],a[i+1]];S.ply.dirty=true;S.focus='[data-act=down][data-i="'+(i+1)+'"]:not(:disabled), [data-act=up][data-i="'+(i+1)+'"]';render()}},
+ rm(b){S.ply.draft.items.splice(+b.dataset.i,1);S.ply.dirty=true;render()},
+ additem(){const [k,id]=$('#addsel').value.split(':'),d=S.ply.draft;let it;
+  if(k==='prayer'){const p=PR(id);it=mk('prayer',p.title,p.text,{ref:id})}
+  else if(k==='step')it=mk('step','Sign of the Cross',SIGN);
+  else if(k==='hymn'){const h=HY(id);it=h?mk('hymn',h.title,'',{ref:id,auto:true}):mk('hymn','Hymn')}
+  else{const m=MD(id);it=mk('media',m.title,'',{media:id})}
+  d.items.push(it);S.ply.dirty=true;render()},
+ addrefl(){const t=$('#rt').value.trim(),x=$('#rx').value.trim();if(!t&&!x){toast('Add a title or some text first.');return}S.ply.draft.items.push(mk('meditation',t||'Reflection',x));S.ply.dirty=true;render()},
+ copy(b){if(!D.ack){openPolicy(()=>copyText(b.dataset.src));return}copyText(b.dataset.src)},
+ impcheck(){S.ply.imp=validateImport($('#imptxt').value);render()},
+ impsave(){const o=S.ply.imp&&S.ply.imp.pkg;if(!o)return;
+  const items=o.items.map(i=>mk(i.kind,i.title,i.text||'',{repeat:i.repeat||1,ref:HY(i.ref)||PRAYERS.find(p=>p.id===i.ref)?i.ref:null,auto:false}));
+  const pl=newPl(o.title,items);pl.desc=o.description||'';S.ply.imp=null;S.ply.impText='';openPl(pl.id);toast('Saved your own copy.');render()},
+ /* player */
+ plstop(){stopMedia();S.play=null;renderPlayer()},
+ plrestart(){stopMedia();S.play.i=0;S.play.rep=1;S.play.done=false;renderPlayer()},
+ plretry(){stopMedia();renderPlayer()},
+ plnext(){const P=S.play;if(!P||P.done)return;const it=P.pl.items[P.i],reps=isText(it)?(it.repeat||1):1;stopMedia();
+  if(P.rep<reps)P.rep++;else if(P.i<P.pl.items.length-1){P.i++;P.rep=1}else P.done=true;
+  renderPlayer();const b=$('#player .pl-body');if(b)b.scrollTop=0},
+ plprev(){const P=S.play;if(!P)return;stopMedia();if(P.rep>1)P.rep--;else if(P.i>0){P.i--;P.rep=1}renderPlayer()},
+ /* hymns */
+ hyuse(b){S.hy.use=b.dataset.v;render()},
+ hycol(b){S.hy.col=b.dataset.v;render()},
+ linkedit(b){S.hy.linkEdit=b.dataset.id;refreshHy()},
+ linkcancel(){S.hy.linkEdit=null;refreshHy()},
+ linkrm(b){delete D.links[b.dataset.id];persist();S.hy.linkEdit=null;toast('Link removed.');refreshHy()},
+ linksave(b){const v=$('#linkurl').value.trim(),err=m=>{$('#linkerr').textContent=m};let u;
+  try{u=new URL(v)}catch(e){return err('Paste a full web address that starts with https://')}
+  if(u.protocol!=='https:')return err('Only https links are accepted.');
+  if(!D.ack){openPolicy(()=>ACT.linksave(b));return}
+  D.links[b.dataset.id]={url:u.href};persist();S.hy.linkEdit=null;toast('Link saved on this device.');refreshHy()},
+ policy(){openPolicy()},
+ gostart(){follow(groupSession(todaySet()))},
+ gmake(){S.glink=true;render()},
+ gcopy(){const o=$('#glink');o.select();const fb=()=>toast('Press and hold to copy the selected text.');try{navigator.clipboard.writeText(o.value).then(()=>toast('Link copied. Paste it in your group chat.'),fb)}catch(e){fb()}},
+ lineupyes(){const L=POL.lineup;if(!L||!L.ok)return;const keep=D.group.prayed||{};D.group=Object.assign({},L.g,{prayed:keep});S.gset=null;persist();POL.open=false;POL.after=null;renderPolicy();toast('The group line-up is saved on this phone.');render()},
+ gset(b){S.gset=b.dataset.v;render()},
+ gdone(){const k=dateKey();D.group.prayed[k]=!D.group.prayed[k];persist();render()},
+ gup(b){const i=+b.dataset.i,a=D.group.parts;if(i>0){[a[i-1],a[i]]=[a[i],a[i-1]];persist();render()}},
+ gdown(b){const i=+b.dataset.i,a=D.group.parts;if(i<a.length-1){[a[i+1],a[i]]=[a[i],a[i+1]];persist();render()}},
+ grm(b){D.group.parts.splice(+b.dataset.i,1);persist();render()},
+ gaddpart(){const [k,id]=$('#gadd').value.split(':');D.group.parts.push(k==='part'?{type:id}:{type:'prayer',ref:id,repeat:1});persist();render()},
+ greset(){if(!twoStep('greset'))return;const link=D.group.joinLink,name=D.group.name;D.group=defaultGroup();D.group.joinLink=link;D.group.name=name;persist();toast('Default line-up restored.');render()},
+ feedback(){POL.open=true;POL.view='feedback';POL.after=null;renderPolicy();const c=$('#policy .pcard');if(c)c.focus()},
+ fbcopy(){const o=$('#fbout');o.select();const fb=()=>toast('Press and hold to copy the selected text.');try{navigator.clipboard.writeText(o.value).then(()=>toast('Copied. Paste it in a message to your prayer leader.'),fb)}catch(e){fb()}},
+ support(){POL.open=true;POL.view='support';POL.after=null;renderPolicy();const c=$('#policy .pcard');if(c)c.focus()},
+ polclose(){POL.open=false;POL.after=null;renderPolicy()},
+ polagree(){D.ack=Date.now();persist();const f=POL.after;POL.open=false;POL.after=null;renderPolicy();if(f)f()},
+ novhy(){S.hy.col='nov';S.hy.use='All';S.hy.q='';go('hymns')},
+ hyadd(b){const h=HY(b.dataset.id);addTo(S.hy.target,[mk('hymn',h.title,'',{ref:h.id,auto:true})]);render()},
+ madd(){
+  const f=S.hy.file||$('#mfile').files[0],title=$('#mtitle').value.trim(),ok=$('#mrights').checked,err=m=>{S.hy.err=m;$('#merr').textContent=m};
+  if(!f)return err('Choose a file first.');
+  if(!title)return err('Give the recording a title.');
+  if(!ok)return err('Confirm that you have permission to play this recording.');
+  const src=$('#msrc').value;if(!src)return err('Say where this recording came from.');
+  if(!D.ack){openPolicy(()=>ACT.madd());return}
+  if(f.size>200*1024*1024)return err('This file is larger than 200 MB. Choose a smaller one.');
+  if(D.media.some(m=>m.name===f.name&&m.size===f.size))return err('This file is already in your recordings.');
+  const video=f.type==='video/mp4'||/\.mp4$/i.test(f.name)&&f.type.startsWith('video'),e=document.createElement(video?'video':'audio'),url=URL.createObjectURL(f);
+  e.preload='metadata';
+  e.onloadedmetadata=()=>{const id='m-'+uid();FILES[id]=f;D.media.push({id,title,type:video?'video':'audio',dur:Math.round(e.duration)||0,name:f.name,size:f.size,src});persist();URL.revokeObjectURL(url);S.hy.err='';S.hy.file=null;toast('Recording added.');render()};
+  e.onerror=()=>{URL.revokeObjectURL(url);err('This file could not be read as audio or video on this device. Check that it is a standard MP3, M4A or MP4.')};
+  e.src=url;
+ },
+ mprev(b){S.hy.prev=S.hy.prev===b.dataset.id?null:b.dataset.id;render()},
+ mre(b){S.hy.re=b.dataset.id;$('#mre').click()},
+ mrm(b){const id=b.dataset.id;if(!twoStep('mrm'+id))return;
+  const n=D.playlists.filter(p=>p.items.some(i=>i.media===id)).length;
+  D.media=D.media.filter(m=>m.id!==id);delete FILES[id];D.playlists.forEach(p=>p.items.forEach(i=>{if(i.media===id)i.media=null}));persist();
+  toast(n?'Removed. '+n+' playlist'+(n>1?'s':'')+' now show that step as having no recording.':'Recording removed.');render()},
+ /* parish */
+ plannew(){const t=S.par.newType,p={id:uid(),type:t,title:PT[t].label,date:'',coordinator:'',reviewer:'',status:'Draft',notes:'',slots:PT[t].slots.map(l=>({label:l,ref:'',note:''}))};D.plans.unshift(p);persist();S.par.sel=p.id;window.scrollTo(0,0);render()},
+ planopen(b){S.par.sel=b.dataset.id;S.confirm=null;window.scrollTo(0,0);render()},
+ planback(){S.par.sel=null;S.confirm=null;render()},
+ plandup(){const s=D.plans.find(p=>p.id===S.par.sel),p=clone(s);p.id=uid();p.title=s.title+' (copy)';p.status='Draft';D.plans.unshift(p);persist();S.par.sel=p.id;toast('Duplicated as a new draft.');render()},
+ plandel(){if(!twoStep('plandel'))return;D.plans=D.plans.filter(p=>p.id!==S.par.sel);persist();S.par.sel=null;toast('Plan deleted.');render()},
+ planbuild(){const p=D.plans.find(x=>x.id===S.par.sel);const items=[];let empty=0;
+  p.slots.forEach(s=>{
+   if(s.ref.startsWith('h:')){const h=HY(s.ref.slice(2));items.push(mk('hymn',s.label+': '+h.title,s.note,{ref:h.id}))}
+   else if(s.ref.startsWith('p:')){const src=D.playlists.find(x=>x.id===s.ref.slice(2));if(src)clone(src.items).forEach(i=>{i.id=uid();items.push(i)})}
+   else if(s.note.trim())items.push(mk('meditation',s.label,s.note));
+   else empty++;
+  });
+  if(!items.length){toast('Fill at least one slot first.');return}
+  const pl=newPl(p.title,items);openPl(pl.id);toast(empty?'Playlist built. '+empty+' empty slot'+(empty>1?'s were':' was')+' left out.':'Playlist built.');go('playlists')}
+};
+function pi_(p){return mk('prayer',p.title,p.text,{ref:p.id})}
+
+const INP={
+ libq(t){S.lib.q=t.value;$('#libList').innerHTML=libList()},
+ gname(t){D.group.name=t.value;persist()},
+ fbnote(t){D.fb.note=t.value;persist();updFb()},
+ hyq(t){S.hy.q=t.value;$('#hyList').innerHTML=hyList()},
+ ptitle(t){S.ply.draft.title=t.value;S.ply.dirty=true;refreshSaveBar()},
+ pdesc(t){S.ply.draft.desc=t.value;S.ply.dirty=true;refreshSaveBar()},
+ itext(t){S.ply.draft.items[+t.dataset.i].text=t.value;S.ply.dirty=true;refreshSaveBar()},
+ imptxt(t){S.ply.impText=t.value;S.ply.imp=null},
+ pname(t){const p=D.plans.find(x=>x.id===S.par.sel);p.title=t.value;persist()},
+ pdate(t){D.plans.find(x=>x.id===S.par.sel).date=t.value;persist()},
+ pcoord(t){D.plans.find(x=>x.id===S.par.sel).coordinator=t.value;persist()},
+ prev(t){D.plans.find(x=>x.id===S.par.sel).reviewer=t.value;persist()},
+ pnotes(t){D.plans.find(x=>x.id===S.par.sel).notes=t.value;persist()},
+ slotnote(t){D.plans.find(x=>x.id===S.par.sel).slots[+t.dataset.i].note=t.value;persist()}
+};
+const CHG={
+ nsel(t){S.rn.day=+t.value},
+ gday(t){D.group.schedule[+t.dataset.i]=t.value;persist()},
+ grep(t){const v=Math.max(1,Math.min(60,parseInt(t.value,10)||1));t.value=v;D.group.parts[+t.dataset.i].repeat=v;persist()},
+ gjoin(t){const v=t.value.trim(),e=$('#gjerr');
+  if(!v){D.group.joinLink='';persist();e.textContent='';return}
+  let u;try{u=new URL(v)}catch(x){e.textContent='Paste a full web address that starts with https://';return}
+  if(u.protocol!=='https:'){e.textContent='Only https links are accepted.';return}
+  D.group.joinLink=u.href;persist();e.textContent='';toast('Group link saved.')},
+ fbq(t){D.fb[t.name]=t.value;persist();updFb()},
+ irep(t){const v=Math.max(1,Math.min(60,parseInt(t.value,10)||1));t.value=v;S.ply.draft.items[+t.dataset.i].repeat=v;S.ply.dirty=true;refreshSaveBar()},
+ ihymn(t){const it=S.ply.draft.items[+t.dataset.i],h=HY(t.value);it.ref=t.value||null;if(it.auto&&h)it.title=h.title;S.ply.dirty=true;render()},
+ imedia(t){const it=S.ply.draft.items[+t.dataset.i],m=MD(t.value);it.media=t.value||null;if(it.kind==='media'&&m)it.title=m.title;S.ply.dirty=true;render()},
+ hytarget(t){S.hy.target=t.value},
+ mfile(t){const f=t.files[0];S.hy.file=f||null;S.hy.err='';const ti=$('#mtitle');if(f&&!ti.value)ti.value=f.name.replace(/\.[^.]+$/,'');$('#merr').textContent=''},
+ mre(t){const f=t.files[0];if(f&&S.hy.re){FILES[S.hy.re]=f;toast('File attached for this session.');t.value='';render()}},
+ newtype(t){S.par.newType=t.value},
+ polok(t){const b=$('[data-act=polagree]');if(b)b.disabled=!t.checked},
+ shok(t){const b=$('[data-act=copy]');if(b)b.disabled=!t.checked},
+ pstatus(t){const p=D.plans.find(x=>x.id===S.par.sel);
+  if(t.value==='Reviewed'&&!p.reviewer.trim()){toast('Add the reviewer’s name before marking this plan as reviewed.');render();return}
+  p.status=t.value;persist();render()},
+ slotref(t){D.plans.find(x=>x.id===S.par.sel).slots[+t.dataset.i].ref=t.value;persist();render()}
+};
+document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||/^(INPUT|SELECT|TEXTAREA)$/.test(b.tagName))return;
+  const f=ACT[b.dataset.act];if(f){if(!/^(libnav|nday|up|down)$/.test(b.dataset.act)&&S.confirm&&!/^(delmine|pldel|plandel|mrm|greset)$/.test(b.dataset.act))S.confirm=null;f(b,e)}});
+document.addEventListener('input',e=>{const f=INP[e.target.dataset&&e.target.dataset.act];if(f)f(e.target,e)});
+document.addEventListener('change',e=>{const f=CHG[e.target.dataset&&e.target.dataset.act];if(f)f(e.target,e)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&POL.open){ACT.polclose();return}if(!S.play)return;
+  if(e.key==='Escape')ACT.plstop();
+  else if(/^(INPUT|SELECT|TEXTAREA|VIDEO|AUDIO)$/.test(e.target.tagName))return;
+  else if(e.key==='ArrowRight')ACT.plnext();else if(e.key==='ArrowLeft')ACT.plprev()});
+window.addEventListener('hashchange',route);
+route();
+})();
+</script>
+<script>if('serviceWorker' in navigator&&/^https?:/.test(location.protocol)){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body></html>
