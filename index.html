@@ -472,8 +472,8 @@ function plistHTML(){
 function itemRow(it,i){
   const n=S.ply.draft.items.length,textual=!(it.kind==='hymn'||it.kind==='media');
   const hsel=it.kind==='hymn'?`<select data-act="ihymn" data-i="${i}" aria-label="Hymn for step ${i+1}"><option value="">Choose a hymn…</option>${HYMNS.map(h=>`<option value="${h.id}" ${it.ref===h.id?'selected':''}>${esc(h.title)}</option>`).join('')}</select>`:'';
-  const msel=(it.kind==='hymn'||it.kind==='media')?`<select data-act="imedia" data-i="${i}" aria-label="Recording for step ${i+1}"><option value="">${it.kind==='media'?'Choose a recording…':'No recording attached'}</option>${D.media.map(m=>`<option value="${m.id}" ${it.media===m.id?'selected':''}>${esc(m.title)}</option>`).join('')}</select>`:'';
-  const miss=it.media&&MD(it.media)&&!FILES[it.media]?'<span class="chip warn">File not attached this session</span>':'';
+  const msel=(it.kind==='hymn'||it.kind==='media')?`<select data-act="imedia" data-i="${i}" aria-label="Recording for step ${i+1}"><option value="">${it.kind==='media'?'Choose a recording…':'No recording attached'}</option>${D.media.map(m=>`<option value="${m.id}" ${it.media===m.id?'selected':''}>${esc(m.title)}${m.type==='link'?' (link)':''}</option>`).join('')}</select>`:'';
+  const miss=it.media&&MD(it.media)&&MD(it.media).type!=='link'&&!FILES[it.media]?'<span class="chip warn">File not attached this session</span>':'';
   const edit=(it.kind==='meditation'||it.kind==='step')?`<details><summary>Edit text</summary><textarea data-act="itext" data-i="${i}" aria-label="Text for step ${i+1}">${esc(it.text)}</textarea></details>`:'';
   return `<li class="it"><span class="n">${i+1}</span><div class="main"><div class="head"><span class="chip ${it.kind==='hymn'||it.kind==='media'?'acc':''}">${KIND[it.kind]}</span><strong>${esc(it.title)}</strong>${miss}</div>${hsel}${msel}${edit}</div>
    <div class="side2">${textual?`<label class="note" style="display:flex;align-items:center;gap:6px">×<input type="number" min="1" max="60" value="${it.repeat||1}" data-act="irep" data-i="${i}" aria-label="Repeat step ${i+1}"></label>`:''}
@@ -536,13 +536,13 @@ function hyList(){
   return rows.map(h=>`<li class="hy"><div class="nm"><b>${esc(h.title)}</b><small>${esc(h.type)}${h.comp?' · '+esc(h.comp):''}</small>${(h.notes||[]).map(n=>`<small>${esc(n)}</small>`).join('')}</div><div class="chips">${h.best?'<span class="chip good">Best choice</span>':''}${h.uses.map(u=>`<span class="chip">${u}</span>`).join('')}${rightsChip(h.rights)}</div><div class="actions"><button class="btn sm" data-act="hyadd" data-id="${h.id}" aria-label="Add ${esc(h.title)} to playlist">Add</button>${linkBtns(h)}</div>${linkEd(h)}</li>`).join('');
 }
 function mediaList(){
-  if(!D.media.length)return `<li class="empty">No recordings yet. Add a file you own or have permission to play.</li>`;
-  return D.media.map(m=>{const ok=!!FILES[m.id];
+  if(!D.media.length)return `<li class="empty">No recordings yet. Add a file, or a link to a song you are allowed to play.</li>`;
+  return D.media.map(m=>{const lk=m.type==='link',ok=lk||!!FILES[m.id];
     const used=D.playlists.filter(p=>p.items.some(i=>i.media===m.id)).length;
-    return `<li class="mi"><div class="nm"><b>${esc(m.title)}</b><small style="display:block;color:var(--ink2);font-size:13px">${m.type==='video'?'Video':'Audio'} · ${fmtDur(m.dur)} · ${esc(m.name)} · ${esc(m.src||'Source not recorded')}</small>
-     ${S.hy.prev===m.id&&ok?`<div id="prevslot"></div>`:''}</div>
-     ${ok?'<span class="chip good">Ready this session</span>':'<span class="chip warn">Re-attach file</span>'}
-     <div class="actions">${ok?`<button class="btn sm" data-act="mprev" data-id="${m.id}">${S.hy.prev===m.id?'Close preview':'Preview'}</button>`:`<button class="btn sm" data-act="mre" data-id="${m.id}">Re-attach</button>`}
+    return `<li class="mi"><div class="nm"><b>${esc(m.title)}</b><small style="display:block;color:var(--ink2);font-size:13px">${lk?'Link':(m.type==='video'?'Video':'Audio')+' · '+fmtDur(m.dur)} · ${esc(m.name)} · ${esc(m.src||'Source not recorded')}</small>
+     ${S.hy.prev===m.id&&ok&&!lk?`<div id="prevslot"></div>`:''}</div>
+     ${lk?'<span class="chip good">Link saved</span>':ok?'<span class="chip good">Ready this session</span>':'<span class="chip warn">Re-attach file</span>'}
+     <div class="actions">${lk?`<a class="btn sm" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Open link</a>`:ok?`<button class="btn sm" data-act="mprev" data-id="${m.id}">${S.hy.prev===m.id?'Close preview':'Preview'}</button>`:`<button class="btn sm" data-act="mre" data-id="${m.id}">Re-attach</button>`}
      <button class="btn sm danger" data-act="mrm" data-id="${m.id}">${S.confirm==='mrm'+m.id?(used?`Remove (used in ${used} playlist${used>1?'s':''})`:'Tap again to remove'):'Remove'}</button></div></li>`}).join('');
 }
 function linkBtns(h){const L=D.links[h.id];
@@ -563,10 +563,12 @@ function pgHymns(){
    <div class="seg" role="group" aria-label="Use" style="margin-bottom:12px">${uses.map(u=>`<button data-act="hyuse" data-v="${u}" aria-pressed="${S.hy.use===u}">${u}</button>`).join('')}</div>
    <div class="legend">Rights: ${rightsChip('pd')} ${rightsChip('varies')} ${rightsChip('perm')}<span>Indicative only. Verify before distributing, and keep the permission on record. Lyrics of copyrighted songs are not stored here.</span></div>
    <ul class="list" id="hyList">${hyList()}</ul>
-   <section class="panel"><div><h2>My recordings</h2><p class="note" style="margin-top:4px">Add MP3 or MP4 files you own or are allowed to play. PRAYERFLOW does not search for, host or download music. Files stay on this device. A browser keeps them only while this page is open, so re-attach them next time and the app will tell you when one is missing.</p></div>
+   <section class="panel"><div><h2>My recordings</h2><p class="note" style="margin-top:4px">Add MP3 or MP4 files, or links to songs, that you own or are allowed to play. PRAYERFLOW does not search for, host or download music. Files stay on this device. A browser keeps files only while this page is open, so re-attach them next time. Links are kept on this device and need no re-attaching.</p></div>
     <ul class="list" id="mediaList">${mediaList()}</ul>
     <div class="mediaform"><h3>Add a recording</h3>
+     <p class="note">Choose a file, or if you have no file, paste a link to the song. A link opens in the other app, then you come back and tap Next. It stays on this device.</p>
      <label class="fld">File (MP3, M4A or MP4)<input type="file" id="mfile" accept="audio/*,video/mp4,.mp3,.mp4,.m4a" data-act="mfile"></label>
+     <label class="fld">Or a link to the song (https)<input type="url" id="murl" maxlength="500" placeholder="https://"></label>
      <label class="fld">Title<input id="mtitle" maxlength="100"></label>
      <label class="fld">Where did it come from?<select id="msrc"><option value="">Choose one…</option><option>My own recording</option><option>Bought or licensed</option><option>Permission from the publisher or composer</option><option>Public domain</option></select></label>
      <label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="mrights"><span>I own this recording or have permission to play it. I understand that permission to play is not permission to share it.</span></label>
@@ -615,6 +617,7 @@ function follow(pl){stopMedia();S.play={pl:clone(pl),i:0,rep:1,done:false,el:nul
 function mediaBlock(it){
   const m=it.media&&MD(it.media),h=it.ref&&HY(it.ref);
   const sub=h?`<p class="note">Hymn: ${esc(h.title)}</p>`:'';
+  if(m&&m.type==='link'){const dir=/\.(mp3|m4a|mp4|wav|ogg|aac)(\?|#|$)/i.test(m.url);return sub+`<div class="callout"><b>${esc(m.title)}</b><br>This song is a link. Tap Open song, listen, then come back here and tap Next.</div><div class="actions"><a class="btn primary big" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Open song</a></div>${dir?'<div class="mslot" id="mslot"></div>':''}`}
   if(m&&FILES[m.id])return sub+`<div class="mslot" id="mslot"></div><p class="note">Playing “${esc(m.title)}”. The next step opens when it ends, or tap Next to move on.</p>`;
   const why=m?'This recording is not attached on this device right now. Re-attach it in Catholic Hymns, then try again.':(it.kind==='hymn'&&!h?'No hymn has been chosen for this step.':'No recording is attached to this step.');
   const L=h&&D.links[h.id];
@@ -639,11 +642,11 @@ function renderPlayer(){
   const nb=el.querySelector('[data-act=plnext]');if(nb&&!txt===false)nb.focus({preventScroll:true});
 }
 function mountMedia(it){
-  const slot=$('#mslot'),m=it.media&&MD(it.media);if(!slot||!m||!FILES[m.id])return;
-  const e=document.createElement(m.type==='video'?'video':'audio');e.controls=true;e.playsInline=true;
-  const url=URL.createObjectURL(FILES[m.id]);S.play.url=url;S.play.el=e;e.src=url;
+  const slot=$('#mslot'),m=it.media&&MD(it.media);if(!slot||!m)return;const lk=m.type==='link';if(!lk&&!FILES[m.id])return;
+  const e=document.createElement(m.type==='video'||(lk&&/\.mp4(\?|#|$)/i.test(m.url))?'video':'audio');e.controls=true;e.playsInline=true;
+  const url=lk?m.url:URL.createObjectURL(FILES[m.id]);S.play.url=lk?null:url;S.play.el=e;e.src=url;
   e.addEventListener('ended',()=>ACT.plnext());
-  e.addEventListener('error',()=>{slot.innerHTML='<div class="callout">This file could not be played on this device. Use Next to skip it, or check the file format.</div>'});
+  e.addEventListener('error',()=>{slot.innerHTML=lk?'<div class="callout">This link cannot play inside PRAYERFLOW. Use Open song above.</div>':'<div class="callout">This file could not be played on this device. Use Next to skip it, or check the file format.</div>'});
   slot.appendChild(e);const pr=e.play();if(pr&&pr.catch)pr.catch(()=>{});
 }
 
@@ -910,12 +913,17 @@ const ACT={
  novhy(){S.hy.col='nov';S.hy.use='All';S.hy.q='';go('hymns')},
  hyadd(b){const h=HY(b.dataset.id);addTo(S.hy.target,[mk('hymn',h.title,'',{ref:h.id,auto:true})]);render()},
  madd(){
-  const f=S.hy.file||$('#mfile').files[0],title=$('#mtitle').value.trim(),ok=$('#mrights').checked,err=m=>{S.hy.err=m;$('#merr').textContent=m};
-  if(!f)return err('Choose a file first.');
+  const f=S.hy.file||$('#mfile').files[0],uv=($('#murl')||{value:''}).value.trim(),title=$('#mtitle').value.trim(),ok=$('#mrights').checked,err=m=>{S.hy.err=m;$('#merr').textContent=m};
+  if(!f&&!uv)return err('Choose a file, or paste a link to the song.');
+  if(f&&uv)return err('Use either a file or a link, not both.');
   if(!title)return err('Give the recording a title.');
   if(!ok)return err('Confirm that you have permission to play this recording.');
   const src=$('#msrc').value;if(!src)return err('Say where this recording came from.');
+  let lu=null;if(!f){try{lu=new URL(uv)}catch(e){return err('Paste a full web address that starts with https://')}
+   if(lu.protocol!=='https:')return err('Only https links are accepted.');
+   if(D.media.some(m=>m.url===lu.href))return err('This link is already in your recordings.')}
   if(!D.ack){openPolicy(()=>ACT.madd());return}
+  if(!f){D.media.push({id:'m-'+uid(),title,type:'link',url:lu.href,dur:0,name:lu.hostname.replace(/^www\./,''),size:0,src});persist();S.hy.err='';toast('Link added.');render();return}
   if(f.size>200*1024*1024)return err('This file is larger than 200 MB. Choose a smaller one.');
   if(D.media.some(m=>m.name===f.name&&m.size===f.size))return err('This file is already in your recordings.');
   const video=f.type==='video/mp4'||/\.mp4$/i.test(f.name)&&f.type.startsWith('video'),e=document.createElement(video?'video':'audio'),url=URL.createObjectURL(f);
