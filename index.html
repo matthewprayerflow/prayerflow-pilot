@@ -123,6 +123,7 @@ summary{cursor:pointer;font-weight:600;min-height:36px;display:flex;align-items:
 .prayer p+p{margin-top:.9em}
 .facts{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:13.5px;margin:28px 0 0;padding:16px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .facts dt{color:var(--ink2)}.facts dd{margin:0;font-weight:500}
+.picker{display:grid;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}.picker h3{margin:0}.webq{padding:12px 4px;list-style:none}
 .addbar{display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-top:22px}
 .addbar select{flex:1 1 200px;max-width:320px}
 .pn{display:flex;justify-content:space-between;gap:12px;margin-top:22px;flex-wrap:wrap}
@@ -351,7 +352,7 @@ function persist(){try{localStorage.setItem(KEY,JSON.stringify(D))}catch(e){}}
 const FILES={};
 const S={page:'library',size:D.size||1,focus:null,confirm:null,
   lib:{q:'',cat:'All',open:null},rn:{tab:'rosary',set:'Joyful',nov:'spirit',day:1},
-  ply:{sel:null,draft:null,dirty:false,impText:'',imp:null},
+  ply:{sel:null,draft:null,dirty:false,impText:'',imp:null,links:false},
   hy:{q:'',use:'All',col:'All',target:'',err:'',file:null,re:null,prev:null},
   par:{sel:null,newType:'mass'},play:null};
 
@@ -381,8 +382,28 @@ function toast(m){const t=$('#toast');t.textContent=m;t.hidden=false;clearTimeou
 function twoStep(key){if(S.confirm===key){S.confirm=null;return true}S.confirm=key;render();return false}
 function plOptions(sel,withNew){return (withNew?`<option value="__new">New playlist</option>`:'')+D.playlists.map(p=>`<option value="${p.id}" ${sel===p.id?'selected':''}>${esc(p.title)}</option>`).join('')}
 
+/* ---------- lector and choral pickers ---------- */
+const MASSPARTS=['Entrance','Lord, have mercy','Gloria','Responsorial Psalm','Gospel Acclamation','Offertory','Holy, Holy, Holy','Memorial Acclamation','Great Amen','Lamb of God','Communion','Thanksgiving','Recessional'];
+const KINDL={lector:'Lector playlist',choral:'Choral playlist'};
+const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function prayerOpts(q){q=norm(q).trim();
+  const rows=allPrayers().filter(x=>!q||norm(x.title+' '+x.cat).includes(q));
+  return ((!q||norm('Sign of the Cross').includes(q))?'<option value="step:sign">Sign of the Cross</option>':'')+rows.map(x=>`<option value="prayer:${x.id}">${esc(x.title)}</option>`).join('')||'<option value="">No match. Paste it below.</option>'}
+function hymnOpts(q){q=norm(q).trim();
+  const rows=HYMNS.filter(h=>!q||norm(h.title+' '+(h.comp||'')+' '+h.uses.join(' ')).includes(q));
+  const med=D.media.filter(m=>q&&norm(m.title).includes(q));
+  return rows.map(h=>`<option value="hymn:${h.id}">${esc(h.title)}${h.comp?' · '+esc(h.comp):''}</option>`).join('')+med.map(m=>`<option value="media:${m.id}">Recording: ${esc(m.title)}</option>`).join('')||'<option value="">No match. Add the title below.</option>'}
+const linkFor=it=>{const m=it.media&&MD(it.media);if(m&&m.type==='link')return m.url;const L=it.ref&&D.links[it.ref];return L?L.url:null};
+function pickers(d){
+  const pr=d.kind!=='choral'?`<section class="picker"><h3>Add a prayer</h3><div class="addbar" style="margin:0"><label class="fld" style="flex:1 1 200px">Search prayers<input id="psearch" type="search" data-act="psearch" placeholder="Type part of a title" autocomplete="off"></label><label class="fld" style="flex:1 1 200px">Prayer<select id="paddsel">${prayerOpts('')}</select></label><button class="btn" data-act="padd">Add</button></div>
+   <details><summary>Prayer not in the list? Paste its title and text</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Title<input id="pct" maxlength="80"></label><label class="fld">Prayer text<textarea id="pcx" maxlength="6000"></textarea></label><label class="fld">Where is it from? (optional)<input id="pcs" maxlength="120"></label><p class="note">Paste only prayers that are public domain, your own, or that you have permission to use.</p><div><button class="btn" data-act="pcustom">Save and add</button></div></div></details></section>`:'';
+  const hy=d.kind!=='lector'?`<section class="picker"><h3>Add a hymn</h3><div class="addbar" style="margin:0"><label class="fld" style="flex:1 1 200px">Search hymns<input id="hsearch" type="search" data-act="hsearch" placeholder="Title, composer or use" autocomplete="off"></label><label class="fld" style="flex:1 1 200px">Hymn<select id="haddsel">${hymnOpts('')}</select></label><button class="btn" data-act="hadd">Add</button></div>
+   <details><summary>Hymn not in the list? Add its title</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Song title<input id="hct" maxlength="100"></label><label class="fld">Composer (optional)<input id="hcc" maxlength="100"></label><div><button class="btn" data-act="hcustom">Add song</button></div></div></details>
+   ${d.kind==='choral'?`<div class="actions"><button class="btn sm" data-act="massorder">Start from the order of the Mass</button></div>`:''}</section>`:'';
+  return pr+hy;
+}
 /* ---------- playlist model ---------- */
-function newPl(title,items){const now=Date.now();const pl={id:uid(),title,desc:'',rev:1,created:now,modified:now,items:items||[]};D.playlists.unshift(pl);persist();return pl}
+function newPl(title,items,kind){const now=Date.now();const pl={id:uid(),title,desc:'',rev:1,created:now,modified:now,items:items||[]};if(kind)pl.kind=kind;D.playlists.unshift(pl);persist();return pl}
 function addTo(target,items){
   items=clone(items).map(i=>(i.id=uid(),i));
   if(target==='__new'||!target){const pl=newPl('New playlist',items);toast('Created “'+pl.title+'”.');return}
@@ -411,27 +432,29 @@ function novenaItems(n,day){
 function libList(){
   const q=S.lib.q.trim().toLowerCase();
   const rows=allPrayers().filter(p=>(S.lib.cat==='All'||p.cat===S.lib.cat)&&(!q||(p.title+' '+p.text).toLowerCase().includes(q)));
-  if(!rows.length)return `<li class="empty">No prayers match. Clear the search or choose another category.</li>`;
-  return rows.map(p=>`<li><button class="rowbtn" data-act="open" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Written by you</span>':'<span class="chip mid">Awaiting content review</span>'}<span class="s">${esc(p.text.split('\n')[0])}…</span></button></li>`).join('');
+  const web=q?`<li class="webq"><p class="note">Not in the library? Search the web, copy the title and the prayer, then paste them in.</p><div class="actions"><a class="btn" href="https://www.google.com/search?q=${encodeURIComponent(S.lib.q.trim()+' Catholic prayer')}" target="_blank" rel="noopener noreferrer">Search the web for “${esc(S.lib.q.trim())}”</a><button class="btn primary" data-act="ownprefill">Paste a prayer</button></div></li>`:'';
+  if(!rows.length)return `<li class="empty">No prayers match. Clear the search or choose another category.</li>${web}`;
+  return rows.map(p=>`<li><button class="rowbtn" data-act="open" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Added by you</span>':'<span class="chip mid">Awaiting content review</span>'}<span class="s">${esc(p.text.split('\n')[0])}…</span></button></li>`).join('')+web;
 }
 function pgLibrary(){
   if(S.lib.open&&PR(S.lib.open))return reader();
   const cats=['All',...new Set(allPrayers().map(p=>p.cat))];
-  return todayCard()+head('Catholic Prayer Library','Traditional prayers kept as structured content, each with a stable identifier and review status. Open one to read it or add it to a playlist.')+
+  return todayCard()+head('Catholic Prayer Library','Traditional prayers kept as structured content, each with a stable identifier and review status. Open one to read it or add it to a playlist. Can’t find one? Search the web and paste it in.')+
   `<div class="tools"><input id="libq" type="search" placeholder="Search prayers" aria-label="Search prayers" data-act="libq" value="${esc(S.lib.q)}">
    <div class="seg" role="group" aria-label="Category">${cats.map(c=>`<button data-act="libcat" data-v="${esc(c)}" aria-pressed="${S.lib.cat===c}">${esc(c)}</button>`).join('')}</div></div>
    <ul class="list" id="libList">${libList()}</ul>
-   <details class="own"><summary>Write your own prayer</summary><div class="grid">
-    <label class="fld">Title<input id="ownt" maxlength="80"></label>
+   <details class="own" ${S.lib.ownOpen?'open':''}><summary>Add a prayer: paste its title and text</summary><div class="grid">
+    <label class="fld">Title<input id="ownt" maxlength="80" value="${esc(S.lib.pre||'')}"></label>
     <label class="fld">Prayer text<textarea id="ownx" maxlength="6000"></textarea></label>
-    <div class="actions"><button class="btn primary" data-act="ownsave">Save to my prayers</button><span class="note">Your own prayers are labeled separately from curated content and stay on this device.</span></div></div></details>`;
+    <label class="fld">Where is it from? (optional)<input id="ownsrc" maxlength="120" placeholder="Website, book or group"></label>
+    <div class="actions"><button class="btn primary" data-act="ownsave">Save to my prayers</button><span class="note">Paste only prayers that are public domain, your own, or that you have permission to use. Added prayers are labeled separately and stay on this device.</span></div></div></details>`;
 }
 function reader(){
   const all=allPrayers(),i=all.findIndex(p=>p.id===S.lib.open),p=all[i];
   return `<div class="back"><button class="btn sm" data-act="libback">← Library</button>${sizeCtl()}</div>
-  <article class="reader"><div class="actions"><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Written by you</span>':'<span class="chip mid">Awaiting content review</span>'}</div>
+  <article class="reader"><div class="actions"><span class="chip">${esc(p.cat)}</span>${p.mine?'<span class="chip acc">Added by you</span>':'<span class="chip mid">Awaiting content review</span>'}</div>
   <h1>${esc(p.title)}</h1><div class="prayer">${paras(p.text)}</div>
-  <dl class="facts"><dt>Identifier</dt><dd>prayer.${esc(p.id)}</dd><dt>Language</dt><dd>English</dd><dt>Source</dt><dd>${p.mine?'Written by you':p.group?'Group prayer line-up (printed list). Obvious typing errors corrected.':'Traditional Catholic prayer'}</dd><dt>Revision</dt><dd>r1</dd><dt>Review</dt><dd>${p.mine?'Not applicable':'Wording not yet checked by the content reviewer'}</dd>${p.note?`<dt>Reviewer note</dt><dd>${esc(p.note)}</dd>`:''}</dl>
+  <dl class="facts"><dt>Identifier</dt><dd>prayer.${esc(p.id)}</dd><dt>Language</dt><dd>English</dd><dt>Source</dt><dd>${p.mine?(p.source?'Added by you. Source: '+esc(p.source):'Added by you'):p.group?'Group prayer line-up (printed list). Obvious typing errors corrected.':'Traditional Catholic prayer'}</dd><dt>Revision</dt><dd>r1</dd><dt>Review</dt><dd>${p.mine?'Not applicable':'Wording not yet checked by the content reviewer'}</dd>${p.note?`<dt>Reviewer note</dt><dd>${esc(p.note)}</dd>`:''}</dl>
   <div class="addbar"><label class="fld" style="flex:1 1 220px">Add to playlist<select id="addpl">${plOptions('',true)}</select></label><button class="btn primary" data-act="addprayer">Add</button></div>
   <div class="pn"><button class="btn" data-act="libnav" data-id="${all[(i-1+all.length)%all.length].id}">← ${esc(all[(i-1+all.length)%all.length].title)}</button><button class="btn" data-act="libnav" data-id="${all[(i+1)%all.length].id}">${esc(all[(i+1)%all.length].title)} →</button></div>
   ${p.mine?`<div class="actions" style="margin-top:20px"><button class="btn danger sm" data-act="delmine">${S.confirm==='delmine'?'Tap again to delete this prayer':'Delete this prayer'}</button></div>`:''}</article>`;
@@ -465,17 +488,18 @@ function pgRosary(){
 
 /* ---------- PAGE 3: Playlists ---------- */
 function plistHTML(){
-  return `<div class="hd"><h2>Your playlists</h2><button class="btn sm primary" data-act="plnew">New</button></div>
-  ${D.playlists.length?`<ul class="list">${D.playlists.map(p=>`<li><button class="rowbtn ${S.ply.sel===p.id?'on':''}" data-act="plopen" data-id="${p.id}"><span class="t">${esc(p.title)}</span><span class="s">${p.items.length} item${p.items.length===1?'':'s'} · revision ${p.rev} · saved ${fmtDate(p.modified)}</span></button></li>`).join('')}</ul>`
+  return `<div class="hd"><h2>Your playlists</h2></div><div class="actions" style="margin-bottom:10px"><button class="btn sm primary" data-act="plnew" data-v="lector">New lector playlist</button><button class="btn sm primary" data-act="plnew" data-v="choral">New choral playlist</button></div>
+  ${D.playlists.length?`<ul class="list">${D.playlists.map(p=>`<li><button class="rowbtn ${S.ply.sel===p.id?'on':''}" data-act="plopen" data-id="${p.id}"><span class="t">${esc(p.title)}</span>${p.kind?`<span class="chip acc">${p.kind==='choral'?'Choral':'Lector'}</span>`:''}<span class="s">${p.items.length} item${p.items.length===1?'':'s'} · revision ${p.rev} · saved ${fmtDate(p.modified)}</span></button></li>`).join('')}</ul>`
   :`<p class="empty">No playlists yet. Start one here, or build one from the Rosary page.</p>`}`;
 }
 function itemRow(it,i){
   const n=S.ply.draft.items.length,textual=!(it.kind==='hymn'||it.kind==='media');
   const hsel=it.kind==='hymn'?`<select data-act="ihymn" data-i="${i}" aria-label="Hymn for step ${i+1}"><option value="">Choose a hymn…</option>${HYMNS.map(h=>`<option value="${h.id}" ${it.ref===h.id?'selected':''}>${esc(h.title)}</option>`).join('')}</select>`:'';
   const msel=(it.kind==='hymn'||it.kind==='media')?`<select data-act="imedia" data-i="${i}" aria-label="Recording for step ${i+1}"><option value="">${it.kind==='media'?'Choose a recording…':'No recording attached'}</option>${D.media.map(m=>`<option value="${m.id}" ${it.media===m.id?'selected':''}>${esc(m.title)}${m.type==='link'?' (link)':''}</option>`).join('')}</select>`:'';
+  const psel=it.kind==='hymn'?`<select data-act="ipart" data-i="${i}" aria-label="Part of the Mass for step ${i+1}"><option value="">Part of the Mass…</option>${MASSPARTS.map(x=>`<option ${it.part===x?'selected':''}>${esc(x)}</option>`).join('')}</select>`:'';
   const miss=it.media&&MD(it.media)&&MD(it.media).type!=='link'&&!FILES[it.media]?'<span class="chip warn">File not attached this session</span>':'';
   const edit=(it.kind==='meditation'||it.kind==='step')?`<details><summary>Edit text</summary><textarea data-act="itext" data-i="${i}" aria-label="Text for step ${i+1}">${esc(it.text)}</textarea></details>`:'';
-  return `<li class="it"><span class="n">${i+1}</span><div class="main"><div class="head"><span class="chip ${it.kind==='hymn'||it.kind==='media'?'acc':''}">${KIND[it.kind]}</span><strong>${esc(it.title)}</strong>${miss}</div>${hsel}${msel}${edit}</div>
+  return `<li class="it"><span class="n">${i+1}</span><div class="main"><div class="head"><span class="chip ${it.kind==='hymn'||it.kind==='media'?'acc':''}">${KIND[it.kind]}</span><strong>${esc(it.title)}</strong>${it.part?`<span class="chip">${esc(it.part)}</span>`:''}${it.comp?`<small style="color:var(--ink2)"> ${esc(it.comp)}</small>`:''}${miss}</div>${hsel}${psel}${msel}${edit}</div>
    <div class="side2">${textual?`<label class="note" style="display:flex;align-items:center;gap:6px">×<input type="number" min="1" max="60" value="${it.repeat||1}" data-act="irep" data-i="${i}" aria-label="Repeat step ${i+1}"></label>`:''}
    <button data-act="up" data-i="${i}" aria-label="Move step ${i+1} up" ${i===0?'disabled':''}>↑</button><button data-act="down" data-i="${i}" aria-label="Move step ${i+1} down" ${i===n-1?'disabled':''}>↓</button><button data-act="rm" data-i="${i}" aria-label="Remove step ${i+1}">✕</button></div></li>`;
 }
@@ -483,19 +507,19 @@ const saveBar=()=>{const d=S.ply.draft,saved=D.playlists.find(p=>p.id===d.id);
   return `${S.ply.dirty?'<span class="chip warn">Unsaved changes</span>':`<span class="chip good">Saved · revision ${saved?saved.rev:1}</span>`}<button class="btn primary" data-act="plsave" ${S.ply.dirty?'':'disabled'}>Save</button><button class="btn" data-act="pldiscard" ${S.ply.dirty?'':'disabled'}>Discard changes</button>`};
 function editorHTML(){
   const d=S.ply.draft;
-  const opts=`<optgroup label="Prayers">${allPrayers().map(p=>`<option value="prayer:${p.id}">${esc(p.title)}</option>`).join('')}<option value="step:sign">Sign of the Cross</option></optgroup><optgroup label="Hymns">${HYMNS.map(h=>`<option value="hymn:${h.id}">${esc(h.title)}</option>`).join('')}<option value="hymn:">Hymn (choose later)</option></optgroup>${D.media.length?`<optgroup label="My media">${D.media.map(m=>`<option value="media:${m.id}">${esc(m.title)}</option>`).join('')}</optgroup>`:''}`;
   return `<div class="back back-pl" style="margin:0"><button class="btn sm" data-act="plback">← All playlists</button></div>
   <label class="fld">Title<input id="ptitle" data-act="ptitle" maxlength="80" value="${esc(d.title)}"></label>
   <label class="fld">Description<input data-act="pdesc" maxlength="160" value="${esc(d.desc)}"></label>
-  <div><h2>Order of prayer</h2>${d.items.length?`<ol class="items">${d.items.map(itemRow).join('')}</ol>`:`<p class="empty">This playlist is empty. Add a prayer below to begin.</p>`}</div>
-  <div class="addbar" style="margin:0"><label class="fld" style="flex:1 1 220px">Add a step<select id="addsel">${opts}</select></label><button class="btn" data-act="additem">Add</button></div>
+  ${d.kind?`<p class="note"><span class="chip acc">${KINDL[d.kind]}</span> ${d.kind==='lector'?'Devotions and prayers. The leader arranges the order and shares it with the group.':'Songs in the order of the Mass. The choir picks them and shares the list.'}</p>`:''}
+  <div><h2>${d.kind==='choral'?'Order of songs':'Order of prayer'}</h2>${d.items.length?`<ol class="items">${d.items.map(itemRow).join('')}</ol>`:`<p class="empty">This playlist is empty. Add a prayer below to begin.</p>`}</div>
+  ${pickers(d)}
   <details style="margin:0"><summary>Add a reflection or intention</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Title<input id="rt" maxlength="80"></label><label class="fld">Text<textarea id="rx" maxlength="6000"></textarea></label><div><button class="btn" data-act="addrefl">Add reflection</button></div></div></details>
   <div class="savebar" id="savebar">${saveBar()}</div>
   <div class="actions"><button class="btn primary" data-act="plfollow" ${D.playlists.find(p=>p.id===d.id).items.length?'':'disabled'}>${S.ply.dirty?'Follow saved version':'Follow'}</button><button class="btn" data-act="pldup">Duplicate</button><button class="btn danger" data-act="pldel">${S.confirm==='pldel'?'Tap again to delete':'Delete'}</button></div>`;
 }
-function manifest(pl){
-  const items=pl.items.map(it=>{const m=it.media&&MD(it.media);return {kind:it.kind,title:it.title,text:it.text,repeat:it.repeat||1,ref:it.ref||null,media:m?{title:m.title,type:m.type,included:false}:null}});
-  return {schema:'prayerflow.session',version:1,title:pl.title,description:pl.desc||'',notice:'Text and order only. No audio, video or links are included. The sender confirms they may share this text.',items,integrity:hash(JSON.stringify([pl.title,items]))};
+function manifest(pl,withLinks){
+  const items=pl.items.map(it=>{const m=it.media&&MD(it.media);return {kind:it.kind,title:it.title,text:it.text,repeat:it.repeat||1,ref:it.ref||null,part:it.part||null,comp:it.comp||null,link:withLinks?linkFor(it):null,media:m?{title:m.title,type:m.type,included:false}:null}});
+  return {schema:'prayerflow.session',version:1,playlistKind:pl.kind||null,title:pl.title,description:pl.desc||'',notice:withLinks?'Text, order and the sender’s song links. No audio or video is included. The sender confirms they may share this text and these links.':'Text and order only. No audio, video or links are included. The sender confirms they may share this text.',items,integrity:hash(JSON.stringify([pl.title,items]))};
 }
 function validateImport(txt){
   let o;try{o=JSON.parse(txt)}catch(e){return {err:'This is not a readable session package. Paste the full text that was copied from PRAYERFLOW.'}}
@@ -507,16 +531,18 @@ function validateImport(txt){
   for(const it of o.items){
     if(!it||!KIND[it.kind]||typeof it.title!=='string'||it.title.length>200||typeof(it.text||'')!=='string'||(it.text||'').length>20000)return {err:'One of the items is malformed, so nothing was imported.'};
     const r=Number(it.repeat||1);if(!Number.isInteger(r)||r<1||r>60)return {err:'One of the items has an invalid repeat count.'};
+    if(it.link!=null&&(typeof it.link!=='string'||it.link.length>500||!/^https:\/\//i.test(it.link)))return {err:'One of the items has a link that is not a safe https address, so nothing was imported.'};
+    if((it.part!=null&&(typeof it.part!=='string'||it.part.length>80))||(it.comp!=null&&(typeof it.comp!=='string'||it.comp.length>100)))return {err:'One of the items is malformed, so nothing was imported.'};
   }
   if(o.integrity!==hash(JSON.stringify([o.title,o.items])))return {err:'The integrity check failed. The package was changed or copied incompletely, so nothing was imported.'};
-  const missing=o.items.filter(i=>i.media).length;
+  const missing=o.items.filter(i=>i.media&&!i.link).length;
   return {ok:true,pkg:o,missing};
 }
 function shareHTML(){
   const pl=S.ply.sel&&D.playlists.find(p=>p.id===S.ply.sel);
   const imp=S.ply.imp;
-  return `<section class="panel"><div><h2>Share and import</h2><p class="note" style="margin-top:4px">A session package contains titles, order and prayer text. It never includes journal entries, and it does not bundle recordings or links.</p></div>
-  <details open style="margin:0"><summary>Share a session</summary>${pl?`<div style="display:grid;gap:10px;margin-top:8px"><p class="note">Preview of “${esc(pl.title)}” (saved version). Recipients see which recordings are missing before they save.</p><pre class="pkg" id="pkg">${esc(JSON.stringify(manifest(pl),null,2))}</pre><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="shok" data-act="shok"><span>I confirm the text in this session is mine, public domain, or I have permission to share it. No recordings are included.</span></label><div class="actions"><button class="btn" data-act="copy" data-src="#pkg" disabled>Copy package</button></div></div>`:`<p class="note" style="margin-top:8px">Open a playlist above to preview what would be shared.</p>`}</details>
+  return `<section class="panel"><div><h2>Share and import</h2><p class="note" style="margin-top:4px">A session package contains titles, order and prayer text. It never includes journal entries, and it does not bundle recordings. Song links are left out unless you tick the box below.</p></div>
+  <details open style="margin:0"><summary>Share a session</summary>${pl?`<div style="display:grid;gap:10px;margin-top:8px"><p class="note">Preview of “${esc(pl.title)}” (saved version). Recipients see which recordings are missing before they save.</p><pre class="pkg" id="pkg">${esc(JSON.stringify(manifest(pl,S.ply.links),null,2))}</pre><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" data-act="shlinks" ${S.ply.links?'checked':''}><span>Include my song links so the group can open them. Tick this only for links you are allowed to share.</span></label><label style="display:flex;gap:10px;align-items:flex-start"><input type="checkbox" id="shok" data-act="shok"><span>I confirm the text in this session is mine, public domain, or I have permission to share it. No recordings are included.</span></label><div class="actions"><button class="btn" data-act="copy" data-src="#pkg" disabled>Copy package</button></div></div>`:`<p class="note" style="margin-top:8px">Open a playlist above to preview what would be shared.</p>`}</details>
   <details style="margin:0" ${imp?'open':''}><summary>Import a session</summary><div class="mediaform" style="margin-top:8px"><label class="fld">Paste a session package<textarea id="imptxt" data-act="imptxt" placeholder="Paste the copied package here">${esc(S.ply.impText)}</textarea></label>
    <div class="actions"><button class="btn" data-act="impcheck">Check package</button></div>
    ${imp?(imp.err?`<p class="err">${imp.err}</p>`:`<div class="callout"><b>${esc(imp.pkg.title)}</b><br>${imp.pkg.items.length} items${imp.missing?` · ${imp.missing} need recordings you do not have`:''}. Saving makes your own independent copy. Text in a package comes from the sender, so do not pass it on unless you are allowed to.</div><div class="actions"><button class="btn primary" data-act="impsave">Save as my copy</button></div>`):''}</div></details></section>`;
@@ -616,10 +642,10 @@ function stopMedia(){const P=S.play;if(P&&P.el){try{P.el.pause();P.el.removeAttr
 function follow(pl){stopMedia();S.play={pl:clone(pl),i:0,rep:1,done:false,el:null,url:null};renderPlayer()}
 function mediaBlock(it){
   const m=it.media&&MD(it.media),h=it.ref&&HY(it.ref);
-  const sub=h?`<p class="note">Hymn: ${esc(h.title)}</p>`:'';
+  const sub=h?`<p class="note">Hymn: ${esc(h.title)}</p>`:(it.comp?`<p class="note">Composer: ${esc(it.comp)}</p>`:'');
   if(m&&m.type==='link'){const dir=/\.(mp3|m4a|mp4|wav|ogg|aac)(\?|#|$)/i.test(m.url);return sub+`<div class="callout"><b>${esc(m.title)}</b><br>This song is a link. Tap Open song, listen, then come back here and tap Next.</div><div class="actions"><a class="btn primary big" href="${esc(m.url)}" target="_blank" rel="noopener noreferrer">Open song</a></div>${dir?'<div class="mslot" id="mslot"></div>':''}`}
   if(m&&FILES[m.id])return sub+`<div class="mslot" id="mslot"></div><p class="note">Playing “${esc(m.title)}”. The next step opens when it ends, or tap Next to move on.</p>`;
-  const why=m?'This recording is not attached on this device right now. Re-attach it in Catholic Hymns, then try again.':(it.kind==='hymn'&&!h?'No hymn has been chosen for this step.':'No recording is attached to this step.');
+  const why=m?'This recording is not attached on this device right now. Re-attach it in Catholic Hymns, then try again.':(it.kind==='hymn'&&!h&&!it.custom?'No hymn has been chosen for this step.':'No recording is attached to this step.');
   const L=h&&D.links[h.id];
   return sub+`<div class="callout">${why} Nothing was skipped silently. Use Next to move on.</div><div class="actions">${L?`<a class="btn primary" href="${esc(L.url)}" target="_blank" rel="noopener noreferrer">Open my link</a>`:''}<button class="btn" data-act="plretry">Try again</button></div>`;
 }
@@ -636,7 +662,7 @@ function renderPlayer(){
   const body=txt?(it.text.trim()?`<div class="prayer">${paras(it.text)}</div>`:`<p class="note">This step has no text yet. Add it in the playlist builder.</p>`)+beads:mediaBlock(it);
   el.innerHTML=`<div class="pl-top"><button class="btn sm" data-act="plstop">Stop</button><span class="tt">${esc(P.pl.title)}</span>${sizeCtl()}</div>
   <div class="bar" role="progressbar" aria-valuemin="1" aria-valuemax="${n}" aria-valuenow="${P.i+1}"><i style="width:${pct}%"></i></div>
-  <div class="pl-body"><div class="pl-in"><div class="pl-meta"><span class="chip ${txt?'':'acc'}">${KIND[it.kind]}</span><span>Step ${P.i+1} of ${n}</span></div><h2>${esc(it.title)}</h2>${body}</div></div>
+  <div class="pl-body"><div class="pl-in"><div class="pl-meta"><span class="chip ${txt?'':'acc'}">${KIND[it.kind]}${it.part?' · '+esc(it.part):''}</span><span>Step ${P.i+1} of ${n}</span></div><h2>${esc(it.title)}</h2>${body}</div></div>
   <div class="pl-ctl"><button class="btn big" data-act="plprev" ${P.i===0&&P.rep===1?'disabled':''}>Previous</button><button class="btn primary big" data-act="plnext">${last?'Finish':'Next'}</button></div>`;
   mountMedia(it);
   const nb=el.querySelector('[data-act=plnext]');if(nb&&!txt===false)nb.focus({preventScroll:true});
@@ -837,7 +863,7 @@ const ACT={
  libnav(b){S.lib.open=b.dataset.id;S.confirm=null;window.scrollTo(0,0);render()},
  addprayer(){const p=PR(S.lib.open);addTo($('#addpl').value,[pi_(p)]);render()},
  ownsave(){const t=$('#ownt').value.trim(),x=$('#ownx').value.trim();if(!t||!x){toast('Add a title and the prayer text first.');return}
-  D.mine.push({id:'mine-'+uid(),title:t,cat:'My prayers',text:x,mine:true});persist();toast('Saved to your prayers.');render()},
+  D.mine.push({id:'mine-'+uid(),title:t,cat:'My prayers',text:x,mine:true,source:($('#ownsrc')||{value:''}).value.trim()});S.lib.ownOpen=false;S.lib.pre='';persist();toast('Saved to your prayers.');render()},
  delmine(){if(!twoStep('delmine'))return;D.mine=D.mine.filter(p=>p.id!==S.lib.open);persist();S.lib.open=null;toast('Prayer deleted.');render()},
  /* rosary */
  rntab(b){S.rn.tab=b.dataset.v;render()},
@@ -850,7 +876,7 @@ const ACT={
  nfollow(){const n=NOV.find(x=>x.id===S.rn.nov);follow({title:n.title+' · Day '+S.rn.day,items:novenaItems(n,S.rn.day)})},
  nsave(){const n=NOV.find(x=>x.id===S.rn.nov);const pl=newPl(n.title+' · Day '+S.rn.day,novenaItems(n,S.rn.day));openPl(pl.id);toast('Saved as a playlist.');go('playlists')},
  /* playlists */
- plnew(){if(S.ply.dirty){toast('Save or discard your changes first.');return}const pl=newPl('Untitled playlist',[]);openPl(pl.id);S.focus='#ptitle';render()},
+ plnew(b){if(S.ply.dirty){toast('Save or discard your changes first.');return}const kd=b&&b.dataset.v==='choral'?'choral':'lector';const pl=newPl(kd==='choral'?'Untitled choral playlist':'Untitled lector playlist',[],kd);openPl(pl.id);S.focus='#ptitle';render()},
  plopen(b){if(S.ply.dirty&&S.ply.sel!==b.dataset.id){toast('Save or discard your changes first.');return}openPl(b.dataset.id);S.confirm=null;window.scrollTo(0,0);render()},
  plback(){if(S.ply.dirty){toast('Save or discard your changes first.');return}S.ply.sel=null;S.ply.draft=null;S.confirm=null;render()},
  plsave(){const d=S.ply.draft;if(!d.title.trim()){toast('Give the playlist a title before saving.');$('#ptitle').focus();return}
@@ -862,6 +888,18 @@ const ACT={
  up(b){const i=+b.dataset.i,a=S.ply.draft.items;if(i>0){[a[i-1],a[i]]=[a[i],a[i-1]];S.ply.dirty=true;S.focus='[data-act=up][data-i="'+(i-1)+'"]:not(:disabled), [data-act=down][data-i="'+(i-1)+'"]';render()}},
  down(b){const i=+b.dataset.i,a=S.ply.draft.items;if(i<a.length-1){[a[i+1],a[i]]=[a[i],a[i+1]];S.ply.dirty=true;S.focus='[data-act=down][data-i="'+(i+1)+'"]:not(:disabled), [data-act=up][data-i="'+(i+1)+'"]';render()}},
  rm(b){S.ply.draft.items.splice(+b.dataset.i,1);S.ply.dirty=true;render()},
+ padd(){const v=$('#paddsel').value;if(!v)return;const [k,id]=v.split(':'),d=S.ply.draft;let it;
+  if(k==='step')it=mk('step','Sign of the Cross',SIGN);else{const x=PR(id);if(!x)return;it=mk('prayer',x.title,x.text,{ref:id})}
+  d.items.push(it);S.ply.dirty=true;S.focus='#psearch';render()},
+ hadd(){const v=$('#haddsel').value;if(!v)return;const [k,id]=v.split(':'),d=S.ply.draft;let it;
+  if(k==='media'){const m=MD(id);if(!m)return;it=mk('media',m.title,'',{media:id})}else{const h=HY(id);if(!h)return;it=mk('hymn',h.title,'',{ref:id,auto:true})}
+  d.items.push(it);S.ply.dirty=true;S.focus='#hsearch';render()},
+ pcustom(){const t=$('#pct').value.trim(),x=$('#pcx').value.trim();if(!t||!x){toast('Add a title and the prayer text first.');return}
+  const q={id:'mine-'+uid(),title:t,cat:'My prayers',text:x,mine:true,source:$('#pcs').value.trim()};D.mine.push(q);S.ply.draft.items.push(mk('prayer',q.title,q.text,{ref:q.id}));S.ply.dirty=true;persist();toast('Saved to your prayers and added to this playlist.');render()},
+ hcustom(){const t=$('#hct').value.trim(),c=$('#hcc').value.trim();if(!t){toast('Add the song title first.');return}
+  S.ply.draft.items.push(mk('hymn',t,'',{ref:null,auto:false,custom:true,comp:c||null}));S.ply.dirty=true;render()},
+ massorder(){const d=S.ply.draft;let n=0;MASSPARTS.forEach(x=>{if(!d.items.some(i=>i.part===x)){d.items.push(mk('hymn',x,'',{part:x,auto:true}));n++}});S.ply.dirty=true;toast(n?'Added '+n+' parts of the Mass. Remove the ones your parish does not sing, then choose a hymn for each.':'All parts of the Mass are already in this playlist.');render()},
+ ownprefill(){S.lib.ownOpen=true;S.lib.pre=S.lib.q.trim();S.focus='#ownx';render()},
  additem(){const [k,id]=$('#addsel').value.split(':'),d=S.ply.draft;let it;
   if(k==='prayer'){const p=PR(id);it=mk('prayer',p.title,p.text,{ref:id})}
   else if(k==='step')it=mk('step','Sign of the Cross',SIGN);
@@ -872,8 +910,10 @@ const ACT={
  copy(b){if(!D.ack){openPolicy(()=>copyText(b.dataset.src));return}copyText(b.dataset.src)},
  impcheck(){S.ply.imp=validateImport($('#imptxt').value);render()},
  impsave(){const o=S.ply.imp&&S.ply.imp.pkg;if(!o)return;
-  const items=o.items.map(i=>mk(i.kind,i.title,i.text||'',{repeat:i.repeat||1,ref:HY(i.ref)||PRAYERS.find(p=>p.id===i.ref)?i.ref:null,auto:false}));
-  const pl=newPl(o.title,items);pl.desc=o.description||'';S.ply.imp=null;S.ply.impText='';openPl(pl.id);toast('Saved your own copy.');render()},
+  const items=o.items.map(i=>{const x=mk(i.kind,i.title,i.text||'',{repeat:i.repeat||1,ref:HY(i.ref)||PRAYERS.find(p=>p.id===i.ref)?i.ref:null,auto:false,part:i.part||null,comp:i.comp||null,custom:i.kind==='hymn'&&!HY(i.ref)});
+   if(i.link){let m=D.media.find(q=>q.url===i.link);if(!m){let h='link';try{h=new URL(i.link).hostname.replace(/^www\./,'')}catch(e){}m={id:'m-'+uid(),title:i.title,type:'link',url:i.link,dur:0,name:h,size:0,src:'Shared by the sender of this playlist'};D.media.push(m)}x.media=m.id}
+   return x});
+  const pl=newPl(o.title,items,o.playlistKind==='lector'||o.playlistKind==='choral'?o.playlistKind:undefined);pl.desc=o.description||'';S.ply.imp=null;S.ply.impText='';openPl(pl.id);toast('Saved your own copy.');render()},
  /* player */
  plstop(){stopMedia();S.play=null;renderPlayer()},
  plrestart(){stopMedia();S.play.i=0;S.play.rep=1;S.play.done=false;renderPlayer()},
@@ -957,6 +997,8 @@ const ACT={
 function pi_(p){return mk('prayer',p.title,p.text,{ref:p.id})}
 
 const INP={
+ psearch(t){const s=$('#paddsel');if(s)s.innerHTML=prayerOpts(t.value)},
+ hsearch(t){const s=$('#haddsel');if(s)s.innerHTML=hymnOpts(t.value)},
  libq(t){S.lib.q=t.value;$('#libList').innerHTML=libList()},
  gname(t){D.group.name=t.value;persist()},
  fbnote(t){D.fb.note=t.value;persist();updFb()},
@@ -990,6 +1032,8 @@ const CHG={
  mre(t){const f=t.files[0];if(f&&S.hy.re){FILES[S.hy.re]=f;toast('File attached for this session.');t.value='';render()}},
  newtype(t){S.par.newType=t.value},
  polok(t){const b=$('[data-act=polagree]');if(b)b.disabled=!t.checked},
+ shlinks(t){S.ply.links=t.checked;render()},
+ ipart(t){S.ply.draft.items[+t.dataset.i].part=t.value||null;S.ply.dirty=true;render()},
  shok(t){const b=$('[data-act=copy]');if(b)b.disabled=!t.checked},
  pstatus(t){const p=D.plans.find(x=>x.id===S.par.sel);
   if(t.value==='Reviewed'&&!p.reviewer.trim()){toast('Add the reviewer’s name before marking this plan as reviewed.');render();return}
