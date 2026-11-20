@@ -1,6 +1,6 @@
 /* PRAYERFLOW pilot: keeps the app available with a weak connection.
    When you upload a new version of the app, change the number in CACHE so phones fetch it. */
-const CACHE='prayerflow-pilot-v3';
+const CACHE='prayerflow-pilot-v4';
 const FILES=['./','index.html','manifest.webmanifest','icon-192.png','icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
